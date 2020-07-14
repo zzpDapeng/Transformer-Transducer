@@ -18,9 +18,6 @@ from tt.utils import AttrDict
 from tt.model import Transducer
 from tt.utils import concat_frame, subsampling, generate_dictionary, get_feature
 
-
-
-
 class stream_rec:
     def __init__(self,
                  model=None,
