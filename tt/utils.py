@@ -1,5 +1,7 @@
 import torch
+import wave
 import logging
+import librosa
 import editdistance
 import numpy as np
 import python_speech_features
@@ -162,14 +164,28 @@ def generate_dictionary(path):
     return dictionary
 
 
-def get_feature(wave_data, framerate, nfilt):
-    feature = python_speech_features.logfbank(
-        signal=wave_data,
-        samplerate=framerate,
-        winlen=0.032,
-        winstep=0.010,
-        nfilt=nfilt)
-    return feature
+def read_wave_from_file(audio_file):
+    """
+    return 一维numpy数组，如（584,） 采样率"""
+    wav = wave.open(audio_file, 'rb')
+    num_frames = wav.getnframes()
+    framerate = wav.getframerate()
+    str_data = wav.readframes(num_frames)
+    wav.close()
+    wave_data = np.frombuffer(str_data, dtype=np.short)
+    return wave_data,framerate
+
+
+def get_feature(wave_data, framerate):
+    """
+    :param wave_data: 一维numpy,dtype=int16
+    :param framerate:
+    :return: specgram [序列长度,特征维度]
+    """
+    wave_data = wave_data.astype("float32")
+    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160)
+    specgram = np.log(specgram).T
+    return specgram
 
 if __name__ == '__main__':
     a = np.random.randint(0,100,(1,10,8))

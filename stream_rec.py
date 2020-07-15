@@ -13,6 +13,7 @@ import pyaudio
 import numpy as np
 import tkinter as tk
 import tkinter.font as font
+import matplotlib.pyplot as plt
 import python_speech_features
 from tt.utils import AttrDict
 from tt.model import Transducer
@@ -36,7 +37,7 @@ class stream_rec:
         print("字典加载完毕")
 
         # 音频参数
-        self.chunk = chunk
+        self.chunk = rate
         self.sample_width = sample_width
         self.channels = channels
         self.rate = rate
@@ -52,10 +53,10 @@ class stream_rec:
         self.pa = pyaudio.PyAudio()
 
         # 录音数据
-        self.audio_data = np.empty((0, 1), dtype=np.short)  # 使用numpy存储录制的音频数据
+        self.audio_data = np.empty((0,), dtype=np.short)  # 使用numpy存储录制的音频数据
         self.frame_num = 0 # 记录当前录制的音频帧总数
 
-        self.win_len = self.rate  # 滑动窗口长度（单位：帧数），窗口长度设为镇速率，则窗口长度为1秒
+        self.win_len = math.ceil(self.rate / self.chunk) * self.chunk  # 滑动窗口长度（单位：帧数），窗口长度设为镇速率，则窗口长度为1秒
         self.step_len = self.win_len - self.layer_num * (self.right_mask + self.left_mask)   # 推算出的步长
         self.win_position = 0  # 滑动窗口当前的的起始位置（单位：帧）
 
@@ -63,6 +64,7 @@ class stream_rec:
         self.result = []
         self.feature = np.empty((0, 128))  # 数据类型？
         self.effective_feature = np.empty((0,128))
+
 
         # 可视化
         self.window = tk.Tk()
@@ -85,7 +87,6 @@ class stream_rec:
 
     def __callback(self, in_data, frame_count, time_info, status):
         chunk_data = np.frombuffer(in_data, dtype=np.short)
-        chunk_data = np.expand_dims(chunk_data, axis=1)
         self.audio_data = np.concatenate((self.audio_data, chunk_data), axis=0)
         self.frame_num += frame_count
         # 到达录制时间，停止
@@ -106,43 +107,47 @@ class stream_rec:
         self.stream.start_stream()
         print("开始录音并识别")
 
-        zero_token = torch.tensor([[0]], dtype=torch.long)
-        zero_token = zero_token.cuda()
-        dec_state = self.model.decoder(zero_token)[:, -1, :]
+        # zero_token = torch.tensor([[0]], dtype=torch.long)
+        # zero_token = zero_token.cuda()
+        # dec_state = self.model.decoder(zero_token)[:, -1, :]
         # todo:流式识别具体过程
         # todo：方案1 以数据帧为窗口，不考虑窗口前后的上下文特征信息，不考虑mask
         while True:
             if self.win_position + self.win_len <= self.frame_num:  # 有足够的语音使得窗口能够移动
-                win_audio = self.audio_data[self.win_position:self.win_len,:]
-                win_audio_feature = get_feature(win_audio, self.rate, 128)
-                # 数据堆叠和下采样处理
-                win_audio_feature = concat_frame(win_audio_feature, 3, 0)
-                win_audio_feature = subsampling(win_audio_feature, 30)
-                # 扩展批次维度
-                win_audio_feature = np.expand_dims(win_audio_feature, axis=0) # 可以不扩展维度吗
-                # GPU
-                win_audio_feature = torch.from_numpy(win_audio_feature).cuda()
+                win_audio = self.audio_data[self.win_position:self.win_position+self.win_len]
+                print(win_audio.max())
+                print(win_audio.min())
 
-                win_enc_states = self.model.encoder(win_audio_feature)
-
-                enc_states_len = win_enc_states.shape[1]
-                for t in range(0,enc_states_len):
-                    logits = self.model.joint(win_enc_states[:,t,:].view(-1), dec_state.view(-1))
-                    out = torch.nn.functional.softmax(logits, dim=0).detach()
-                    pred = torch.argmax(out, dim=0)
-                    pred = int(pred.item())
-                    if pred != 0:
-                        self.result.append(pred)
-                        word = self.dictionary(pred)
-                        self.text.insert('end', word)
-                        self.text.update()
-                        token = torch.tensor([[self.result]], dtype=torch.long)
-                        token = token.cuda()
-                        dec_state = self.model.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
+                # win_audio_feature = get_feature(win_audio, self.rate, 128)
+                # # 数据堆叠和下采样处理
+                # win_audio_feature = concat_frame(win_audio_feature, 3, 0)
+                # win_audio_feature = subsampling(win_audio_feature, 30)
+                # # 扩展批次维度
+                # win_audio_feature = np.expand_dims(win_audio_feature, axis=0) # 可以不扩展维度吗
+                # # GPU
+                # win_audio_feature = torch.from_numpy(win_audio_feature).cuda()
+                #
+                # win_enc_states = self.model.encoder(win_audio_feature)
+                #
+                # enc_states_len = win_enc_states.shape[1]
+                # for t in range(0,enc_states_len):
+                #     logits = self.model.joint(win_enc_states[:,t,:].view(-1), dec_state.view(-1))
+                #     out = torch.nn.functional.softmax(logits, dim=0).detach()
+                #     pred = torch.argmax(out, dim=0)
+                #     pred = int(pred.item())
+                #     if pred != 0:
+                #         self.result.append(pred)
+                #         word = self.dictionary(pred)
+                #         self.text.insert('end', word)
+                #         self.text.update()
+                #         token = torch.tensor([[self.result]], dtype=torch.long)
+                #         token = token.cuda()
+                #         dec_state = self.model.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
                 # 窗口移动
                 self.win_position += self.win_len
 
             if self.win_position == self.max_frame_num:
+                print("over")
                 break
 
         # 循环监听音频流是否录制完成 用上面的替换
