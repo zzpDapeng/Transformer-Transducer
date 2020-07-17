@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import os
 import tt.kaldi_io as kaldi_io
+from tt.utils import get_feature, read_wave_from_file
 import speechpy
 import python_speech_features
 
@@ -116,7 +117,7 @@ class AudioDataset(Dataset):
         super(AudioDataset, self).__init__(config, type)
 
         self.config = config
-        self.text = os.path.join(config.__getattr__(type), 'grapheme.txt')
+        self.text = os.path.join(config.__getattr__(type), 'grapheme_all.txt')
 
         self.short_first = config.short_first
 
@@ -142,9 +143,13 @@ class AudioDataset(Dataset):
         seq = self.targets_dict[utt_id]
 
         targets = np.array(seq)
-        features = np.load(feats_scp)
+        wave_data, frame_rate= read_wave_from_file(feats_scp)
+        features = get_feature(wave_data, frame_rate)
+
+        # features = np.load(feats_scp)
         # features = kaldi_io.read_mat(feats_scp)
         # features = speechpy.processing.cmvnw(features,win_size=3*16000+1,variance_normalization=True)
+
 
         if self.apply_cmvn:
             spk_id = self.utt2spk[utt_id]

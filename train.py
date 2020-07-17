@@ -13,6 +13,8 @@ from tensorboardX import SummaryWriter
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer
 
 
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+
 def train(epoch, config, model, training_data, optimizer, logger, visualizer=None):
 
     model.train()
@@ -137,16 +139,19 @@ def main():
     shutil.copyfile(opt.config, os.path.join(exp_name, 'aishell.yaml'))
     logger.info('Save config info.')
 
-    num_workers = config.training.num_gpu * config.data.batch_size
+    # num_workers = config.training.num_gpu * config.data.batch_size
+    num_workers = config.data.batch_size
     train_dataset = AudioDataset(config.data, 'train')
     training_data = torch.utils.data.DataLoader(
-        train_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
+        train_dataset, batch_size=config.data.batch_size,
+        # train_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
         shuffle=config.data.shuffle, num_workers=num_workers)
     logger.info('Load Train Set!')
 
     dev_dataset = AudioDataset(config.data, 'dev')
     validate_data = torch.utils.data.DataLoader(
-        dev_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
+        dev_dataset, batch_size=config.data.batch_size,
+        # dev_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
         shuffle=False, num_workers=num_workers)
     logger.info('Load Dev Set!')
 

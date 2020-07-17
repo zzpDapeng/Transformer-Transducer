@@ -1,2 +1,6 @@
 egs/
 .idea/
+data/aishell
+data/thchs30
+data/joint
+data/*.wav

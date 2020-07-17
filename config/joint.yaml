@@ -1,9 +1,9 @@
 units_type: character
-feature_source: python_speech_features
-feature_type: fbank
+feature_source: librosa
+feature_type: logmel
 data:
-    name: aishell
-    vocab: data/aishell/grapheme_table.txt
+    name: joint
+    vocab: data/joint/grapheme_table.txt
     left_context_width: 3
     right_context_width: 0
     frame_rate: 30
@@ -13,9 +13,9 @@ data:
     batch_size: 8
     short_first: False
     shuffle: False
-    train: data/aishell/train
-    dev: data/aishell/dev
-    test: data/aishell/test
+    train: data/joint/train
+    dev: data/joint/dev
+    test: data/joint/test
 model:
     type: transducer
     enc:
@@ -27,7 +27,7 @@ model:
         n_head: 8
         d_model: 512
         d_head: 64
-        n_layer: 4
+        n_layer: 10
     dec:
         type: attention
         max_target_length: 50
@@ -37,11 +37,11 @@ model:
         n_head: 8
         d_model: 512
         d_head: 64
-        n_layer: 1
+        n_layer: 2
     joint:
         input_size: 1024
-        inner_size: 1024
-    vocab_size: 4334
+        inner_size: 2048
+    vocab_size: 6485
     share_weight: False
     feature_dim:
     dropout: 0.1
@@ -51,12 +51,12 @@ training:
     load_decoder: False
     eval_or_not: True
     seed: 1
-    num_gpu: 0
+    num_gpu: 1
     epochs: 30
     max_grad_norm: 200
     visualization: True
     show_interval: 10
-    save_model: small_model_big_batch
+    save_model: 10e_2d
 optim:
     type: sgd
     lr: 0.00025

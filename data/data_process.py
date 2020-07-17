@@ -8,6 +8,7 @@
 import os
 import wave
 import time
+import json
 import torch
 import torchaudio
 import numpy as np
@@ -18,6 +19,8 @@ from specAugment import spec_augment_pytorch
 import librosa
 import speechpy
 
+ROOT = "/mnt/32da6dad-b2d9-45a9-8959-49fff09a3aa3/speech_datasets/chinese"
+MY_ROOT = "/media/dapeng/文档/Dataset/中文语音数据集"
 
 def read_wav_data(filename):
     wav = wave.open(filename, 'rb')
@@ -29,7 +32,6 @@ def read_wav_data(filename):
     wave_data = np.frombuffer(str_data, dtype=np.short)
     wave_data.shape = -1, num_channels
     return wave_data, framerate
-
 
 
 def fbank_feature(wave_data,framerate,nfilt):
@@ -67,7 +69,6 @@ def generate_aishell_feature(wav_path):
                         np_save_path = os.path.join(save_path, subdir, npy_name)
                         np.save(np_save_path, feature)
                         wf.writelines(file_pure_name+" "+np_save_path+"\n")
-
 
 
 def generate_aishell_feature2(wav_path):
@@ -246,5 +247,318 @@ def test_specAugment():
     plt.plot(masked_spec)
     plt.show()
 
+def delete_final_line(file):
+    with open(file, "rb+") as f:
+        lines = f.readlines()  # 读取所有行
+        last_line = lines[-1]  # 取最后一行
+        f.seek(-1, os.SEEK_END)
+        f.truncate()
+
+
+def aishell(aishell_root):
+    # 生成3个feats.scp
+    wav_dir_path = os.path.join(aishell_root, "wav")
+    subdirs = ["train","dev","test"]
+    for subdir in subdirs:
+        save_file = os.path.join(aishell_root,subdir+".scp")
+        sub_root = os.path.join(wav_dir_path,subdir)
+        print(sub_root)
+        with open(save_file, "w") as f:
+            for root, dirs, files in os.walk(sub_root):
+                for file in files:
+                    file_name = file.split(".")[0]
+                    file_path = os.path.join(root,file)
+                    file_path = file_path.replace(MY_ROOT,ROOT)
+                    f.writelines(file_name + " " + file_path + "\n")
+        delete_final_line(save_file)
+
+
+def pad_name(filename):
+    if len(filename) == 7:
+        return filename
+    else:
+        parts = filename.split("_")
+        a = ""
+        b = ""
+        if len(parts[0]) == 3:
+            a = parts[0]
+        else:
+            a = parts[0][0]+"0"+parts[0][1]
+        if len(parts[1]) == 3:
+            b = parts[1]
+        elif len(parts[1]) == 2:
+            b = "0"+parts[1]
+        else:
+            b = "00"+parts[1]
+    return a+"_"+b
+
+def thchs30(thchs30_root):
+    subdirs = ["train","dev","test"]
+    for subdir in subdirs:
+        save_file = os.path.join(thchs30_root,subdir+".scp")
+        sub_root = os.path.join(thchs30_root,subdir)
+        print(sub_root)
+        with open(save_file, "w") as f:
+            for root, dirs, files in os.walk(sub_root):
+                for file in files:
+                    file_format = file.split(".")[-1]
+                    if file_format=="wav":
+                        file_name = file.split(".")[0]
+                        file_name = pad_name(file_name)
+                        file_path = os.path.join(root,file)
+                        file_path = file_path.replace(MY_ROOT,ROOT)
+                        f.writelines(file_name + " " + file_path + "\n")
+        delete_final_line(save_file)
+
+
+def aidatatang(aidatatang_root):
+    # 生成3个feats.scp
+    wav_dir_path = os.path.join(aidatatang_root, "corpus")
+    subdirs = ["train", "dev", "test"]
+    for subdir in subdirs:
+        save_file = os.path.join(aidatatang_root, subdir + ".scp")
+        save_grapheme_file = os.path.join(aidatatang_root, "grapheme_"+ subdir + ".txt")
+        sub_root = os.path.join(wav_dir_path, subdir)
+        print(sub_root)
+        with open(save_file, "w") as f:
+            with open(save_grapheme_file,"w") as fg:
+                for root, dirs, files in os.walk(sub_root):
+                    for file in files:
+                        file_format = file.split(".")[-1]
+                        if file_format=="wav":
+                            file_name = file.split(".")[0]
+                            file_path = os.path.join(root, file)
+                            file_path = file_path.replace(MY_ROOT, ROOT)
+                            f.writelines(file_name + " " + file_path + "\n")
+                        elif file_format=="txt":
+                            file_name = file.split(".")[0]
+                            with open(os.path.join(root,file),"r") as rf:
+                                lines = rf.readlines()
+                            content = str(lines[0])
+                            content = " ".join(content).strip()
+                            fg.writelines(file_name+" "+content+"\n")
+        delete_final_line(save_file)
+        delete_final_line(save_grapheme_file)
+
+
+def primeword(primeword_root):
+    # 不划分
+    wav_dir_path = os.path.join(primeword_root, "audio_files")
+    save_file = os.path.join(primeword_root,"feats.scp")
+    with open(save_file, "w") as f:
+        for root, dirs, files in os.walk(wav_dir_path):
+            for file in files:
+                file_name = file.split(".")[0]
+                file_path = os.path.join(root,file)
+                file_path = file_path.replace(MY_ROOT,ROOT)
+                f.writelines(file_name + " " + file_path + "\n")
+    delete_final_line(save_file)
+    json_file = os.path.join(primeword_root,"set1_transcript.json")
+    save_grapheme_file = os.path.join(primeword_root,"grapheme_all.txt")
+    with open(json_file,"r",encoding="utf-8") as f:
+        json_list = json.load(f)
+    with open(save_grapheme_file,"w") as wf:
+        for j in json_list:
+            file_name = j["file"]
+            file_name = str(file_name).split(".")[0]
+            content = j["text"]
+            content = str(content).strip().replace(" ","")
+            content = " ".join(content)
+            wf.writelines(file_name+" "+content+"\n")
+    delete_final_line(save_grapheme_file)
+
+
+def stcmds(stcmds_root):
+    wave_root = os.path.join(stcmds_root,"ST-CMDS-20170001_1-OS")
+
+    save_feats_file = os.path.join(stcmds_root,"feats.scp")
+    save_grapheme_file = os.path.join(stcmds_root,"grapheme_all.txt")
+    with open(save_feats_file,"w") as f:
+        with open(save_grapheme_file,"w") as fg:
+            for root, dirs, files in os.walk(wave_root):
+                for file in files:
+                    file_format = file.split(".")[-1]
+                    if file_format == "wav":
+                        file_name = file.split(".")[0]
+                        file_path = os.path.join(root, file)
+                        file_path = file_path.replace(MY_ROOT, ROOT)
+                        f.writelines(file_name + " " + file_path + "\n")
+                    elif file_format == "txt":
+                        file_name = file.split(".")[0]
+                        with open(os.path.join(root, file), "r") as rf:
+                            lines = rf.readlines()
+                        content = str(lines[0]).strip()
+                        content = " ".join(content).strip()
+                        fg.writelines(file_name + " " + content + "\n")
+    delete_final_line(save_feats_file)
+    delete_final_line(save_grapheme_file)
+
+def magicdata(magicdatda_root):
+    subdirs = ["train","dev","test"]
+    for subdir in subdirs:
+        save_file = os.path.join(magicdatda_root,subdir+".scp")
+        sub_root = os.path.join(magicdatda_root,subdir)
+        with open(save_file,"w") as f:
+            for root,dirs,files in os.walk(sub_root):
+                for file in files:
+                    file_format = file.split(".")[-1]
+                    if file_format == "wav":
+                        file_name = file.split(".")[0]
+                        file_path = os.path.join(root,file)
+                        f.writelines(file_name+" "+file_path+"\n")
+        delete_final_line(save_file)
+
+def magic_grapheme(magic_data_root):
+    subfiles = ["train","dev","test"]
+    for subfile in subfiles:
+        r_file = os.path.join(magic_data_root, subfile+".txt")
+        save_file = os.path.join(magic_data_root,"grapheme_"+subfile+".txt")
+        with open(r_file,"r") as rf:
+            lines = rf.readlines()
+        with open(save_file,"w") as wf:
+            for i in range(1,len(lines)):
+                l = lines[i].split("	")
+                file_name = l[0].split(".")[0]
+                content = l[-1].split(" ")[-1].strip()
+                content = " ".join(content)
+                wf.writelines(file_name+" "+content+"\n")
+        delete_final_line(save_file)
+
+def merge(joint_root):
+    subdirs = ["train","dev","test"]
+    for subdir in subdirs:
+        sub_root = os.path.join(joint_root,subdir)
+        # save_feats = os.path.join(joint_root,subdir+"_feats.scp")
+        save_grapheme = os.path.join(joint_root,subdir+"_grapheme.txt")
+        # with open(save_feats,"w",encoding="utf-8") as ff:
+        with open(save_grapheme,"w",encoding="utf-8") as fg:
+            for root, dirs, files in os.walk(sub_root):
+                for file in files:
+                    # file_format = file.split(".")[-1]
+                    # if file_format == "scp":
+                    #     with open(os.path.join(root,file),"r") as rf:
+                    #         lines = rf.readlines()
+                    #     # for line in lines:
+                    #     #     ff.writelines(line)
+                    #     ff.writelines(lines)
+                    #     ff.writelines("\n")
+                    # elif file_format == "txt":
+                    with open(os.path.join(root,file),"r") as rf:
+                        lines = rf.readlines()
+                    # for line in lines:
+                    #     fg.writelines(line)
+                    fg.writelines(lines)
+                    fg.writelines("\n")
+        # delete_final_line(save_feats)
+        delete_final_line(save_grapheme)
+
+
+def grapheme_table(joint_root):
+    subroots = ["train","dev","test"]
+    save_file = os.path.join(joint_root,"grapheme_table.txt")
+    max = 0
+    grapheme = {"<b>":0}
+    index = 1
+    for subroot in subroots:
+        grapheme_text = os.path.join(joint_root,subroot,"grapheme_all.txt")
+        with open(grapheme_text,"r") as rf:
+            print(grapheme_text)
+            for line in rf:
+                line = line.strip()
+                parts = line.split()
+                content = parts[1:]
+                length = len(content)
+                max =  length if length > max else max
+                for word in content:
+                    if grapheme.get(word) is None:
+                        print(word,index)
+                        if word == "▽":
+                            print(content,line)
+                        if word == "菈":
+                            print(content,line)
+                        if word == "屮":
+                            print(content, line)
+                        if word == "録":
+                            print(content, line)
+                        grapheme[word]=index
+                        index+=1
+
+    with open(save_file, "w") as wf:
+        for key in grapheme.keys():
+            wf.writelines(key+" "+str(grapheme[key])+"\n")
+    delete_final_line(save_file)
+
+    print(max)
+
+import string
+from zhon.hanzi import punctuation
+ct = punctuation
+et = string.punctuation
+token = ct + et
+def is_ok(ch):
+    """判断一个unicode是否是汉字"""
+    global token
+    if ch in token:
+        return False
+    elif '\u4e00' <= ch <= '\u9fff':
+        return True
+    return False
+
+def remove_token_and_generate_table(joint_root):
+    subroots = ["train","dev","test"]
+    save_table = os.path.join(joint_root,"grapheme_table.txt")
+    dic = {"<b>":0}
+    index = 1
+    for subroot in subroots:
+        grapheme_txt = os.path.join(joint_root,subroot,"grapheme_all.txt")
+        save_grapheme_file = os.path.join(joint_root,subroot,"grapheme.txt")
+        with open(grapheme_txt,"r",encoding='utf-8') as rf:
+            lines = rf.readlines()
+        sub_lines = []
+        delete_num = 0
+        for line in lines:
+            parts = line.strip().split(" ")
+            name = parts[0]
+            content = parts[1:]
+            ok=True
+            for word in content:
+                if is_ok(word) == False:
+                    ok = False
+                    delete_num+=1
+                    break
+            if ok ==True:
+                sub_lines.append(line)
+                for word in content:
+                    if dic.get(word) is None:
+                        dic[word]=index
+                        index+=1
+        print(subroot+"删除:"+str(delete_num))
+        with open(save_grapheme_file,"w",encoding="utf-8") as wf:
+            wf.writelines(sub_lines)
+    with open(save_table,"w",encoding="utf-8") as f:
+        for key in dic.keys():
+            f.writelines(key+" "+str(dic[key])+"\n")
+    delete_final_line(save_table)
+
 if __name__ == '__main__':
-    test_different_dataset()
+    # my_aishell_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_aishell"
+    # my_thchs30_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_thchs30"
+    # my_aidatatang_root = "/media/dapeng/文档/Dataset/中文语音数据集/aidatatang_200zh"
+    # my_magicdata_root = "/media/dapeng/文档/Dataset/中文语音数据集/magicdata"
+    # my_primewords_root = "/media/dapeng/文档/Dataset/中文语音数据集/primewords_md_2018_set1"
+    # my_stcmdss_root = "/media/dapeng/文档/Dataset/中文语音数据集/ST-CMDS"
+    joint_root = "/home/dapeng/Code/Transformer-Transducer/data/joint"
+    #
+    # merge(joint_root)
+    remove_token_and_generate_table(joint_root)
+
+    # feats = "/media/dapeng/文档/Dataset/中文语音数据集/Joint/feats.scp"
+    # grapheme = "/media/dapeng/文档/Dataset/中文语音数据集/Joint/grapheme_all.txt"
+    # with open(feats,"r") as f:
+    #     lines1 = f.readlines()
+    # with open(grapheme,"r") as f:
+    #     lines2 = f.readlines()
+    # print(len(lines1),len(lines2))
+
+    # joint_root = "/home/dapeng/Code/Transformer-Transducer/data/joint"
+    # grapheme_table(joint_root)
