@@ -43,6 +43,7 @@ def init_logger(log_file=None):
 
 
 def computer_cer(preds, labels):
+    """计算一个批次的cer"""
     dist = sum(editdistance.eval(label, pred) for label, pred in zip(labels, preds))
     total = sum(len(l) for l in labels)
     return dist, total
@@ -186,6 +187,19 @@ def get_feature(wave_data, framerate):
     specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160)
     specgram = np.log(specgram).T
     return specgram
+
+def dict_map(preds, vocab):
+    for batch in range(len(preds)):
+        for i in range(len(preds[batch])):
+            word = vocab[preds[batch][i]]
+            preds[batch][i] = word
+    return preds
+
+def write_result(preds, transcripts):
+    with open("decode.txt", "a") as f:
+        for batch in range(len(transcripts)):
+            f.writelines("Transcripts:"+"".join(transcripts[batch])+"\n")
+            f.writelines("---Predicts:"+"".join(preds[batch])+"\n")
 
 if __name__ == '__main__':
     a = np.random.randint(0,100,(1,10,8))

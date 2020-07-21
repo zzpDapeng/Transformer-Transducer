@@ -10,7 +10,7 @@ from tt.model import Transducer
 from tt.optim import Optimizer
 from tt.dataset import AudioDataset
 from tensorboardX import SummaryWriter
-from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer
+from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
@@ -79,7 +79,7 @@ def train(epoch, config, model, training_data, optimizer, logger, visualizer=Non
                 (epoch, total_loss / (step+1), end_epoch-start_epoch))
 
 
-def eval(epoch, config, model, validating_data, logger, visualizer=None):
+def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=None):
     model.eval()
     total_loss = 0
     total_dist = 0
@@ -96,10 +96,15 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None):
         inputs = inputs[:, :max_inputs_length, :]
         targets = targets[:, :max_targets_length]
 
-        preds = model.recognize(inputs, inputs_length)
+        preds = model.recognize2(inputs, inputs_length)
 
         transcripts = [targets.cpu().numpy()[i][:targets_length[i].item()]
                        for i in range(targets.size(0))]
+
+        if vocab is not None:
+            preds = dict_map(preds, vocab)
+            transcripts = dict_map(transcripts, vocab)
+
 
         dist, num_words = computer_cer(preds, transcripts)
         total_dist += dist
@@ -109,6 +114,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None):
         if step % config.training.show_interval == 0:
             process = step / batch_steps * 100
             logger.info('-Validation-Epoch:%d(%.5f%%), CER: %.5f %%' % (epoch, process, cer))
+            write_result(preds, transcripts)
 
     val_loss = total_loss/(step+1)
     logger.info('-Validation-Epoch:%4d, AverageLoss:%.5f , AverageCER: %.5f %%' %
@@ -154,6 +160,15 @@ def main():
         # dev_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
         shuffle=False, num_workers=num_workers)
     logger.info('Load Dev Set!')
+
+    vocab = {}
+    with open(config.data.vocab,"r") as f:
+        for line in f:
+            parts = line.strip().split()
+            word = parts[0]
+            index = parts[1]
+            vocab[index] = index
+
 
     if config.training.num_gpu > 0:
         torch.cuda.manual_seed(config.training.seed)
@@ -219,7 +234,7 @@ def main():
               optimizer, logger, visualizer)
 
         if config.training.eval_or_not:
-            _ = eval(epoch, config, model, validate_data, logger, visualizer)
+            _ = eval(epoch, config, model, validate_data, logger, visualizer, vocab)
 
         save_name = os.path.join(exp_name, '%s.epoch%d.chkpt' % (config.training.save_model, epoch))
         save_model(model, optimizer, config, save_name)

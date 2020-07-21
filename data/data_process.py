@@ -428,31 +428,31 @@ def merge(joint_root):
     subdirs = ["train","dev","test"]
     for subdir in subdirs:
         sub_root = os.path.join(joint_root,subdir)
-        # save_feats = os.path.join(joint_root,subdir+"_feats.scp")
+        save_feats = os.path.join(joint_root,subdir+"_feats.scp")
         save_grapheme = os.path.join(joint_root,subdir+"_grapheme.txt")
-        # with open(save_feats,"w",encoding="utf-8") as ff:
-        with open(save_grapheme,"w",encoding="utf-8") as fg:
-            for root, dirs, files in os.walk(sub_root):
-                for file in files:
-                    # file_format = file.split(".")[-1]
-                    # if file_format == "scp":
-                    #     with open(os.path.join(root,file),"r") as rf:
-                    #         lines = rf.readlines()
-                    #     # for line in lines:
-                    #     #     ff.writelines(line)
-                    #     ff.writelines(lines)
-                    #     ff.writelines("\n")
-                    # elif file_format == "txt":
-                    with open(os.path.join(root,file),"r") as rf:
-                        lines = rf.readlines()
-                    # for line in lines:
-                    #     fg.writelines(line)
-                    fg.writelines(lines)
-                    fg.writelines("\n")
-        # delete_final_line(save_feats)
+        with open(save_feats,"w",encoding="utf-8") as ff:
+            with open(save_grapheme,"w",encoding="utf-8") as fg:
+                for root, dirs, files in os.walk(sub_root):
+                    for file in files:
+                        file_format = file.split(".")[-1]
+                        if file_format == "scp":
+                            with open(os.path.join(root,file),"r") as rf:
+                                lines = rf.readlines()
+                            # for line in lines:
+                            #     ff.writelines(line)
+                            ff.writelines(lines)
+                            ff.writelines("\n")
+                        elif file_format == "txt":
+                            with open(os.path.join(root,file),"r") as rf:
+                                lines = rf.readlines()
+                        # for line in lines:
+                        #     fg.writelines(line)
+                        fg.writelines(lines)
+                        fg.writelines("\n")
+        delete_final_line(save_feats)
         delete_final_line(save_grapheme)
 
-
+# 不用了
 def grapheme_table(joint_root):
     subroots = ["train","dev","test"]
     save_file = os.path.join(joint_root,"grapheme_table.txt")
@@ -462,7 +462,6 @@ def grapheme_table(joint_root):
     for subroot in subroots:
         grapheme_text = os.path.join(joint_root,subroot,"grapheme_all.txt")
         with open(grapheme_text,"r") as rf:
-            print(grapheme_text)
             for line in rf:
                 line = line.strip()
                 parts = line.split()
@@ -471,15 +470,6 @@ def grapheme_table(joint_root):
                 max =  length if length > max else max
                 for word in content:
                     if grapheme.get(word) is None:
-                        print(word,index)
-                        if word == "▽":
-                            print(content,line)
-                        if word == "菈":
-                            print(content,line)
-                        if word == "屮":
-                            print(content, line)
-                        if word == "録":
-                            print(content, line)
                         grapheme[word]=index
                         index+=1
 

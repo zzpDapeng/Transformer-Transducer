@@ -27,7 +27,7 @@ model:
         n_head: 8
         d_model: 512
         d_head: 64
-        n_layer: 4
+        n_layer: 8
     dec:
         type: attention
         max_target_length: 50
@@ -37,7 +37,7 @@ model:
         n_head: 8
         d_model: 512
         d_head: 64
-        n_layer: 1
+        n_layer: 2
     joint:
         input_size: 1024
         inner_size: 1024

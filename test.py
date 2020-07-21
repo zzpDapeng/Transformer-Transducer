@@ -27,6 +27,26 @@
 #     return False
 #
 # print(is_ok("西"))
-s = " a "
-s.strip()
-print(s)
+# s = " a "
+# s.strip()
+# print(s)
+
+# import editdistance
+# def computer_cer(preds, labels):
+#     dist = sum(editdistance.eval(label, pred) for label, pred in zip(labels, preds))
+#     total = sum(len(l) for l in labels)
+#     return dist, total
+#
+# labels = [['你','好','在','吗'],['我','呵','呵','了']]
+# preds = [['你','在'],['我','呵','了','哦']]
+# print(computer_cer(preds, labels))
+
+from tt.utils import dict_map,write_result
+pred = [[1,2],[2,1]]
+trans = [[1,2],[1,2]]
+dic = {1:"你",2:"在"}
+pred = dict_map(pred,dic)
+trans = dict_map(trans,dic)
+write_result(pred,trans)
+
+

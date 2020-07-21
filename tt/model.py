@@ -105,9 +105,9 @@ class Transducer(nn.Module):
             decoded_seq = decode(enc_states[i], inputs_length[i])
             results.append(decoded_seq)
 
-        with open('decode.txt', 'w') as fid:
-            for line in results:
-                fid.write(str(line)+'\n')
+        # with open('decode.txt', 'w') as fid:
+        #     for line in results:
+        #         fid.write(str(line)+'\n')
 
         return results
 
@@ -153,8 +153,8 @@ class Transducer(nn.Module):
             decoded_seq = decode(enc_states[i], inputs_length[i])
             results.append(decoded_seq)
 
-        with open('decode.txt', 'w') as fid:
-            for line in results:
-                fid.write(str(line)+'\n')
+        # with open('decode.txt', 'w') as fid:
+        #     for line in results:
+        #         fid.write(str(line)+'\n')
 
         return results

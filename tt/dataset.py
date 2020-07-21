@@ -117,7 +117,7 @@ class AudioDataset(Dataset):
         super(AudioDataset, self).__init__(config, type)
 
         self.config = config
-        self.text = os.path.join(config.__getattr__(type), 'grapheme_all.txt')
+        self.text = os.path.join(config.__getattr__(type), 'grapheme.txt')
 
         self.short_first = config.short_first
 
