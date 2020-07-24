@@ -14,7 +14,7 @@ class Dataset:
         self.name = config.name
         self.left_context_width = config.left_context_width
         self.right_context_width = config.right_context_width
-        self.frame_rate = config.frame_rate
+        self.subsample = config.subsample
         self.apply_cmvn = config.apply_cmvn
 
         self.max_input_length = config.max_input_length
@@ -102,14 +102,12 @@ class Dataset:
         return concated_features
 
     def subsampling(self, features):
-        if self.frame_rate != 10:
-            interval = int(self.frame_rate / 10)
-            temp_mat = [features[i]
-                        for i in range(0, features.shape[0], interval)]
-            subsampled_features = np.row_stack(temp_mat)
-            return subsampled_features
-        else:
-            return features
+        interval = self.subsample
+        temp_mat = [features[i]
+                    for i in range(0, features.shape[0], interval)]
+        subsampled_features = np.row_stack(temp_mat)
+        return subsampled_features
+
 
 
 class AudioDataset(Dataset):
@@ -150,14 +148,16 @@ class AudioDataset(Dataset):
         # features = kaldi_io.read_mat(feats_scp)
         # features = speechpy.processing.cmvnw(features,win_size=3*16000+1,variance_normalization=True)
 
-
         if self.apply_cmvn:
             spk_id = self.utt2spk[utt_id]
             stats = self.cmvn_stats_dict[spk_id]
             features = self.cmvn(features, stats)
 
+        print('source:',features.shape)
         features = self.concat_frame(features)
+        print('concat:',features.shape)
         features = self.subsampling(features)
+        print('subsample:',features.shape)
 
         inputs_length = np.array(features.shape[0]).astype(np.int64)
         targets_length = np.array(targets.shape[0]).astype(np.int64)
@@ -210,8 +210,13 @@ class AudioDataset(Dataset):
 
     # 移除没有转录的音频特征
     def check_speech_and_text(self):
-        featslist = copy.deepcopy(self.feats_list)
-        for utt_id in featslist:
-            if utt_id not in self.targets_dict:
-                self.feats_list.remove(utt_id)
+        # featslist = copy.deepcopy(self.feats_list)
+        featslist = []
+        for utt_id in self.feats_list:
+            # if utt_id not in self.targets_dict:
+            #     self.feats_list.remove(utt_id)
+            if self.targets_dict.get(utt_id) is not None:
+                # self.feats_list.remove(utt_id)
+                featslist.append(utt_id)
+        self.feats_list = featslist
 
