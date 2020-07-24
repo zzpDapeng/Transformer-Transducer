@@ -27,7 +27,7 @@ model:
         n_head: 8
         d_model: 512
         d_head: 64
-        n_layer: 10
+        n_layer: 18
     dec:
         type: attention
         max_target_length: 50

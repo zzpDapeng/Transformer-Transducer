@@ -41,12 +41,17 @@
 # preds = [['你','在'],['我','呵','了','哦']]
 # print(computer_cer(preds, labels))
 
-from tt.utils import dict_map,write_result
-pred = [[1,2],[2,1]]
-trans = [[1,2],[1,2]]
-dic = {1:"你",2:"在"}
-pred = dict_map(pred,dic)
-trans = dict_map(trans,dic)
-write_result(pred,trans)
+# from tt.utils import dict_map,write_result
+# pred = [[1,2],[2,1]]
+# trans = [[1,2],[1,2]]
+# dic = {1:"你",2:"在"}
+# pred = dict_map(pred,dic)
+# trans = dict_map(trans,dic)
+# write_result(pred,trans)
 
-
+import numpy as np
+a = np.array([1.,2.,0.])
+a = np.ma.log(a).T
+a = a.filled(0)
+print(a.shape)
+print(type(a))

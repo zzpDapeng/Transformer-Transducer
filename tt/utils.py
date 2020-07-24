@@ -184,16 +184,18 @@ def get_feature(wave_data, framerate):
     :return: specgram [序列长度,特征维度]
     """
     wave_data = wave_data.astype("float32")
-    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160)
-    specgram = np.log(specgram).T
+    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=64)
+    specgram = np.ma.log(specgram).T
+    specgram = specgram.filled(0)
     return specgram
 
 def dict_map(preds, vocab):
+    res = np.empty(np.array(preds).shape,dtype=np.str)
     for batch in range(len(preds)):
         for i in range(len(preds[batch])):
             word = vocab[preds[batch][i]]
-            preds[batch][i] = word
-    return preds
+            res[batch][i] = word
+    return res.tolist()
 
 def write_result(preds, transcripts):
     with open("decode.txt", "a") as f:

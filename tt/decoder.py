@@ -8,13 +8,9 @@ class BaseDecoder(nn.Module):
     def __init__(self, vocab_size, n_layer, k_len, n_head, d_model, d_head, d_inner, dropout, **kwargs):
         super(BaseDecoder, self).__init__()
 
-        a = torch.randn((k_len, n_head, d_head),dtype=torch.float32)
-        b = torch.randn((n_head, d_head), dtype=torch.float32)
-        c = torch.randn((k_len, n_head), dtype=torch.float32)
-
-        self.r_emb = nn.Parameter(a)
-        self.r_w_bias = nn.Parameter(b)
-        self.r_bias = nn.Parameter(c)
+        self.r_emb = nn.Parameter(torch.randn((k_len, n_head, d_head),dtype=torch.float32))
+        self.r_w_bias = nn.Parameter(torch.randn((n_head, d_head), dtype=torch.float32))
+        self.r_bias = nn.Parameter(torch.randn((k_len, n_head), dtype=torch.float32))
 
         self.MultiHeadAttention = RelLearnableDecoderLayer(n_head, d_model, d_head, d_inner, dropout, **kwargs)
 
@@ -28,7 +24,7 @@ class BaseDecoder(nn.Module):
 class BuildDecoder(nn.Module):
     def __init__(self, config):
         super(BuildDecoder, self).__init__()
-        self.dec_embedding = nn.Embedding(config.vocab_size, config.dec.d_model, padding_idx=0)
+        self.dec_embedding = nn.Embedding(config.vocab_size, config.dec.d_model, padding_idx=0)  #TODO：是否替换？
         self.layers = nn.ModuleList([BaseDecoder(
             vocab_size=config.vocab_size,
             n_layer=config.dec.n_layer,

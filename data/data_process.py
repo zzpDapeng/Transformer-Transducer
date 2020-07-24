@@ -191,6 +191,7 @@ def wave_librosa_logmel(audio_file):
     wave_data = wave_data.astype("float32")
     specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160)
     specgram = np.log(specgram).T
+    specgram = np.nan_to_num(specgram)
     return specgram
 
 
@@ -530,6 +531,28 @@ def remove_token_and_generate_table(joint_root):
             f.writelines(key+" "+str(dic[key])+"\n")
     delete_final_line(save_table)
 
+
+def generate_joint_feture():
+    joint_root = "joint/" # 替换为joint配置文件的保存路径
+    feature_save_root = "aishell/feature/" #修改为绝对路径，创建对应文件夹
+    new_feats_root = "aishell/feature/feats/" #修改为绝对路径，创建对应文件夹
+    subdirs = ["train","dev","test"]
+    for subdir in subdirs:
+        feats_path = os.path.join(joint_root,subdir,"feats.scp")
+        new_feats_path = os.path.join(new_feats_root, "feats_"+subdir + ".scp")
+        with open(feats_path,"r") as rf:
+            lines = rf.readlines()
+        with open(new_feats_path,"w") as wf:
+            for line in lines:
+                parts = line.strip().split(" ")
+                name = parts[0]
+                wav_path = parts[1]
+                feature = wave_librosa_logmel(wav_path)
+                save_path = os.path.join(feature_save_root, subdir, name+".npy")
+                wf.writelines(name+" "+save_path+"\n")
+                np.save(save_path,feature)
+        delete_final_line(new_feats_path)
+
 if __name__ == '__main__':
     # my_aishell_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_aishell"
     # my_thchs30_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_thchs30"
@@ -537,10 +560,10 @@ if __name__ == '__main__':
     # my_magicdata_root = "/media/dapeng/文档/Dataset/中文语音数据集/magicdata"
     # my_primewords_root = "/media/dapeng/文档/Dataset/中文语音数据集/primewords_md_2018_set1"
     # my_stcmdss_root = "/media/dapeng/文档/Dataset/中文语音数据集/ST-CMDS"
-    joint_root = "/home/dapeng/Code/Transformer-Transducer/data/joint"
+    # joint_root = "/home/dapeng/Code/Transformer-Transducer/data/joint"
     #
     # merge(joint_root)
-    remove_token_and_generate_table(joint_root)
+    # remove_token_and_generate_table(joint_root)
 
     # feats = "/media/dapeng/文档/Dataset/中文语音数据集/Joint/feats.scp"
     # grapheme = "/media/dapeng/文档/Dataset/中文语音数据集/Joint/grapheme_all.txt"
@@ -552,3 +575,9 @@ if __name__ == '__main__':
 
     # joint_root = "/home/dapeng/Code/Transformer-Transducer/data/joint"
     # grapheme_table(joint_root)
+
+    # generate_joint_feture()
+
+    audio = '/media/dapeng/文档/Dataset/中文语音数据集/data_aishell/wav/dev/S0724/BAC009S0724W0255.wav'
+    wave_data, rate = read_wav_data(audio)
+    print(wave_data.shape)

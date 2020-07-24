@@ -56,7 +56,6 @@ class Transducer(nn.Module):
 
         enc_state = self.encoder(inputs)
         concat_targets = F.pad(targets, pad=[1, 0, 0, 0], value=0)
-
         dec_state = self.decoder(concat_targets)
 
         logits = self.joint(enc_state, dec_state)
@@ -128,7 +127,6 @@ class Transducer(nn.Module):
 
         def decode(enc_state, lengths):
             token_list = []
-
             dec_state = self.decoder(zero_token)[:, -1, :]
 
             for t in range(lengths):
@@ -139,11 +137,10 @@ class Transducer(nn.Module):
 
                 if pred != 0:
                     token_list.append(pred)
-                    token = torch.tensor([[token_list]], dtype=torch.long)
+                    token = torch.tensor([token_list], dtype=torch.long)
 
                     if enc_state.is_cuda:
                         token = token.cuda()
-
                     dec_state = self.decoder(token)[:, -1, :] # 历史信息输入，但是只取最后一个输出
 
             return token_list

@@ -15,13 +15,9 @@ class BaseEncoder(nn.Module):
                  **kwargs):
         super(BaseEncoder, self).__init__()
 
-        r_emb = torch.randn((k_len, n_head, d_head),dtype=torch.float32)
-        r_w_bias = torch.randn((n_head, d_head), dtype=torch.float32)
-        r_bias = torch.randn((k_len, n_head), dtype=torch.float32)
-
-        self.r_emb = nn.Parameter(r_emb)
-        self.r_w_bias = nn.Parameter(r_w_bias)
-        self.r_bias = nn.Parameter(r_bias)
+        self.r_emb = nn.Parameter(torch.randn((k_len, n_head, d_head),dtype=torch.float32))
+        self.r_w_bias = nn.Parameter(torch.randn((n_head, d_head), dtype=torch.float32))
+        self.r_bias = nn.Parameter(torch.randn((k_len, n_head), dtype=torch.float32))
 
         self.MultiHeadAttention = RelLearnableDecoderLayer(n_head, d_model, d_head, d_inner, dropout, **kwargs, )
 

@@ -13,8 +13,6 @@ from tensorboardX import SummaryWriter
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-
 def train(epoch, config, model, training_data, optimizer, logger, visualizer=None):
 
     model.train()
@@ -27,14 +25,14 @@ def train(epoch, config, model, training_data, optimizer, logger, visualizer=Non
 
         start = time.process_time()
 
+        max_inputs_length = inputs_length.max()
+        max_targets_length = targets_length.max()
+        inputs = inputs[:, :max_inputs_length, :]
+        targets = targets[:, :max_targets_length]
+
         if config.training.num_gpu > 0:
             inputs, inputs_length = inputs.cuda(), inputs_length.cuda()
             targets, targets_length = targets.cuda(), targets_length.cuda()
-
-        max_inputs_length = inputs_length.max().item()
-        max_targets_length = targets_length.max().item()
-        inputs = inputs[:, :max_inputs_length, :]
-        targets = targets[:, :max_targets_length]
 
         if config.optim.step_wise_update:
             optimizer.step_decay_lr()
@@ -48,7 +46,8 @@ def train(epoch, config, model, training_data, optimizer, logger, visualizer=Non
 
         loss.backward()
 
-        total_loss += loss.item()
+        # total_loss += loss.item()
+        total_loss += float(loss)
 
         grad_norm = nn.utils.clip_grad_norm_(
             model.parameters(), config.training.max_grad_norm)
@@ -73,6 +72,8 @@ def train(epoch, config, model, training_data, optimizer, logger, visualizer=Non
                         'AverageLoss: %.5f, Run Time:%.3f' % (epoch, process, optimizer.global_step, optimizer.lr,
                                                               grad_norm, loss.item(), avg_loss, end-start))
 
+        del loss
+
         # break
     end_epoch = time.process_time()
     logger.info('-Training-Epoch:%d, Average Loss: %.5f, Epoch Time: %.3f' %
@@ -87,14 +88,14 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
     batch_steps = len(validating_data)
     for step, (inputs, inputs_length, targets, targets_length) in enumerate(validating_data):
 
+        max_inputs_length = inputs_length.max()
+        max_targets_length = targets_length.max()
+        inputs = inputs[:, :max_inputs_length, :]
+        targets = targets[:, :max_targets_length]
+
         if config.training.num_gpu > 0:
             inputs, inputs_length = inputs.cuda(), inputs_length.cuda()
             targets, targets_length = targets.cuda(), targets_length.cuda()
-
-        max_inputs_length = inputs_length.max().item()
-        max_targets_length = targets_length.max().item()
-        inputs = inputs[:, :max_inputs_length, :]
-        targets = targets[:, :max_targets_length]
 
         preds = model.recognize2(inputs, inputs_length)
 
@@ -142,7 +143,7 @@ def main():
         os.makedirs(exp_name)
     logger = init_logger(os.path.join(exp_name, opt.log))
 
-    shutil.copyfile(opt.config, os.path.join(exp_name, 'aishell.yaml'))
+    shutil.copyfile(opt.config, os.path.join(exp_name, 'config.yaml'))
     logger.info('Save config info.')
 
     # num_workers = config.training.num_gpu * config.data.batch_size
@@ -166,9 +167,9 @@ def main():
         for line in f:
             parts = line.strip().split()
             word = parts[0]
-            index = parts[1]
-            vocab[index] = index
-
+            index = int(parts[1])
+            vocab[index] = word
+    logger.info('Load Vocabulary!')
 
     if config.training.num_gpu > 0:
         torch.cuda.manual_seed(config.training.seed)

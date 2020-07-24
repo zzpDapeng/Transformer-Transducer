@@ -6,13 +6,13 @@ data:
     vocab: data/aishell/grapheme_table.txt
     left_context_width: 3
     right_context_width: 0
-    frame_rate: 30
+    subsample: 3
     apply_cmvn: False
     max_input_length: 500  # 最大490
     max_target_length: 50  # 最大44
-    batch_size: 8
+    batch_size: 1
     short_first: False
-    shuffle: False
+    shuffle: True
     train: data/aishell/train
     dev: data/aishell/dev
     test: data/aishell/test
@@ -23,24 +23,24 @@ model:
         max_input_length: 500
         hidden_size:
         output_size:
-        d_inner: 1024
+        d_inner: 512
         n_head: 8
-        d_model: 512
-        d_head: 64
-        n_layer: 8
+        d_model: 256
+        d_head: 32
+        n_layer: 4
     dec:
         type: attention
         max_target_length: 50
         hidden_size:
         output_size:
-        d_inner: 1024
+        d_inner: 512
         n_head: 8
-        d_model: 512
-        d_head: 64
-        n_layer: 2
+        d_model: 256
+        d_head: 32
+        n_layer: 1
     joint:
-        input_size: 1024
-        inner_size: 1024
+        input_size: 512
+        inner_size: 512
     vocab_size: 4334
     share_weight: False
     feature_dim:
@@ -51,12 +51,12 @@ training:
     load_decoder: False
     eval_or_not: True
     seed: 1
-    num_gpu: 0
-    epochs: 30
+    num_gpu: 1
+    epochs: 20
     max_grad_norm: 200
     visualization: True
     show_interval: 10
-    save_model: small_model_big_batch
+    save_model: 4_1_512_feature256_batch1
 optim:
     type: sgd
     lr: 0.00025
