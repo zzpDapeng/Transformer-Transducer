@@ -9,6 +9,7 @@ import os
 import wave
 import time
 import json
+import math
 import torch
 import torchaudio
 import numpy as np
@@ -553,6 +554,139 @@ def generate_joint_feture():
                 np.save(save_path,feature)
         delete_final_line(new_feats_path)
 
+
+def targets_info(grapheme='data/joint/train/grapheme.txt'):
+    max_len = 0
+    max_name = ''
+    len_list = []
+    len_num = {}
+    with open(grapheme, 'r') as f:
+        lines = f.readlines()
+    for line in lines:
+        parts = line.strip().split(' ')
+        name = parts[0]
+        content = parts[1:]
+        length = len(content)
+        len_list.append(length)
+        if length > max_len:
+            max_len = length
+            max_name = name
+    len_list = np.array(len_list)
+    for length in len_list:
+        len_num[length] = len_num.get(length, 0) + 1
+
+    print(sorted(len_num.items(), key=lambda len_num: len_num[0], reverse=False))
+    print('最大长度：', len_list.max())
+    print('标签最长语音：', max_name)
+    print('平均标签长度：', np.array(len_list).mean())
+    print('总标签数量', len(lines))
+    for length_limit in range(10, max_len, 10):
+        valid_num = 0
+        for key in len_num.keys():
+            if key <= length_limit:
+                valid_num += len_num.get(key)
+        print("{}以内的有效标签数量:{},占比{:.2f}%".format(length_limit, valid_num, (100 * valid_num / len(lines))))
+
+
+def clip_targets(clip_len=20):
+    grapheme_root = 'joint/train/'
+    grapheme_file = os.path.join(grapheme_root,'grapheme.txt')
+    clip_file = os.path.join(grapheme_root,'grapheme_clip'+str(clip_len)+'.txt')
+    with open(grapheme_file,'r',encoding='utf-8') as f:
+        lines = f.readlines()
+    with open(clip_file,'w',encoding='utf-8') as f:
+        for line in lines:
+            parts = line.strip().split(' ')
+            content = parts[1:]
+            length = len(content)
+            if length <= clip_len:
+                f.writelines(line)
+
+
+def audio_info():
+    joint_root = 'aishell/'
+    subdirs = ['dev','test','train']
+    for subdir in subdirs:
+        # 读取grapheme_clip文件，获取文件名
+        sub_list = {}
+        grapheme_clip = os.path.join(joint_root, subdir, 'grapheme.txt')
+        with open(grapheme_clip,'r',encoding='utf-8') as f:
+            lines = f.readlines()
+        for line in lines:
+            parts  =line.strip().split(' ')
+            name = parts[0]
+            sub_list[name] = 1
+
+        # 创建feats_clip文件
+        feats = os.path.join(joint_root,subdir,'feats.scp')
+        feats_clip = os.path.join(joint_root,subdir,'feats_clip20.scp')
+        frame_num_list = []
+        frame_num_dict = {}
+        max_frame = 0
+        max_name = ''
+        with open(feats,'r',encoding='utf-8') as f:
+            lines = f.readlines()
+        with open(feats_clip,'w',encoding='utf-8') as wf:
+            for line in tqdm(lines):
+                parts = line.strip().split(' ')
+                name = parts[0]
+                dir = parts[1]
+                if sub_list.get(name) is not None:
+                    wav = wave.open(dir)
+                    frame_num = wav.getnframes()
+                    frame_num = math.ceil(math.ceil(frame_num/160)/3 )
+                    if frame_num > max_frame:
+                        max_frame = frame_num
+                        max_name = name
+                    frame_num_list.append(frame_num)
+        frame_num_list = np.array(frame_num_list)
+        for frame_num in frame_num_list:
+            frame_num_dict[frame_num] = frame_num_dict.get(frame_num, 0) + 1
+        print(subdir+':')
+        print(sorted(frame_num_dict.items(), key=lambda frame_num_dict:frame_num_dict[0], reverse=False))
+        print("最大特征长度：",frame_num_list.max())
+        print("最大特征长度音频：",max_name)
+        print("平均特征长度：",np.array(frame_num_list).mean())
+        print('总音频数量：',len(frame_num_list))
+        for num_limit in range(100,max_frame,50):
+            valid_num = 0
+            for key in frame_num_dict.keys():
+                if key <= num_limit:
+                    valid_num+=frame_num_dict.get(key)
+            print("{}帧以内的有效音频数量:{},占比{:.2f}%".format(num_limit, valid_num, (100 * valid_num / len(frame_num_list))))
+
+
+def audio_clip(limit_frame=300):
+    joint_root = 'aishell/'
+    subdirs = ['dev', 'test', 'train']
+    for subdir in subdirs:
+        # 读取grapheme_clip文件，获取文件名
+        sub_list = {}
+        grapheme_clip = os.path.join(joint_root, subdir, 'grapheme.txt')
+        with open(grapheme_clip, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        for line in lines:
+            parts = line.strip().split(' ')
+            name = parts[0]
+            sub_list[name] = 1
+
+        # 创建feats_clip文件
+        feats = os.path.join(joint_root, subdir, 'feats.scp')
+        feats_clip = os.path.join(joint_root, subdir, 'feats_clip20.scp')
+        with open(feats, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        with open(feats_clip, 'w', encoding='utf-8') as wf:
+            for line in tqdm(lines):
+                parts = line.strip().split(' ')
+                name = parts[0]
+                dir = parts[1]
+                if sub_list.get(name) is not None:
+                    wav = wave.open(dir)
+                    frame_num = wav.getnframes()
+                    frame_num = math.ceil(math.ceil(frame_num / 160) / 3)
+                    if frame_num <= limit_frame:
+                        wf.writelines(line)
+
 if __name__ == '__main__':
     # my_aishell_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_aishell"
     # my_thchs30_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_thchs30"
@@ -576,8 +710,11 @@ if __name__ == '__main__':
     # joint_root = "/home/dapeng/Code/Transformer-Transducer/data/joint"
     # grapheme_table(joint_root)
 
-    # generate_joint_feture()
+    # # generate_joint_feture()
+    #
+    # audio = '/media/dapeng/文档/Dataset/中文语音数据集/data_aishell/wav/dev/S0724/BAC009S0724W0255.wav'
+    # wave_data, rate = read_wav_data(audio)
+    # print(wave_data.shape)
 
-    audio = '/media/dapeng/文档/Dataset/中文语音数据集/data_aishell/wav/dev/S0724/BAC009S0724W0255.wav'
-    wave_data, rate = read_wav_data(audio)
-    print(wave_data.shape)
+    clip_targets(40)
+    # audio_info()

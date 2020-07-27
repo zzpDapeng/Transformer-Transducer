@@ -153,11 +153,8 @@ class AudioDataset(Dataset):
             stats = self.cmvn_stats_dict[spk_id]
             features = self.cmvn(features, stats)
 
-        print('source:',features.shape)
         features = self.concat_frame(features)
-        print('concat:',features.shape)
         features = self.subsampling(features)
-        print('subsample:',features.shape)
 
         inputs_length = np.array(features.shape[0]).astype(np.int64)
         targets_length = np.array(targets.shape[0]).astype(np.int64)

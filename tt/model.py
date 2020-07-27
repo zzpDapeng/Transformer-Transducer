@@ -59,8 +59,13 @@ class Transducer(nn.Module):
         dec_state = self.decoder(concat_targets)
 
         logits = self.joint(enc_state, dec_state)
-        loss = self.crit(logits, targets.int(), inputs_length.int(), targets_length.int())
 
+        # logits = logits.cpu()
+        # targets = targets.cpu()
+        # inputs_length = inputs_length.cpu()
+        # targets_length = targets_length.cpu()
+        loss = self.crit(logits, targets.int(), inputs_length.int(), targets_length.int())
+        print(loss.is_cuda)
         return loss
 
     def recognize(self, inputs, inputs_length):

@@ -10,7 +10,7 @@ data:
     apply_cmvn: False
     max_input_length: 500  # 最大490
     max_target_length: 50  # 最大44
-    batch_size: 1
+    batch_size: 2
     short_first: False
     shuffle: True
     train: data/aishell/train
