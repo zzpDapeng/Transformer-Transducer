@@ -8,12 +8,13 @@ import torch.nn as nn
 import torch.utils.data
 from tt.model import Transducer
 from tt.optim import Optimizer
+from warprnnt_pytorch import RNNTLoss
 from tt.dataset import AudioDataset
 from tensorboardX import SummaryWriter
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
 
 
-def train(epoch, config, model, training_data, optimizer, logger, visualizer=None):
+def train(epoch, config, model, training_data, optimizer, criterion, logger, visualizer=None):
 
     model.train()
     start_epoch = time.process_time()
@@ -39,7 +40,9 @@ def train(epoch, config, model, training_data, optimizer, logger, visualizer=Non
 
         optimizer.zero_grad()
 
-        loss = model(inputs, inputs_length, targets, targets_length)
+        logits = model(inputs, inputs_length, targets, targets_length)
+
+        loss = criterion(logits, targets.int(), inputs_length.int(), targets_length.int())
 
         if config.training.num_gpu > 1:
             loss = torch.mean(loss)
@@ -73,6 +76,7 @@ def train(epoch, config, model, training_data, optimizer, logger, visualizer=Non
                                                               grad_norm, loss.item(), avg_loss, end-start))
 
         del loss
+        break
 
         # break
     end_epoch = time.process_time()
@@ -86,6 +90,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
     total_dist = 0
     total_word = 0
     batch_steps = len(validating_data)
+
     for step, (inputs, inputs_length, targets, targets_length) in enumerate(validating_data):
 
         max_inputs_length = inputs_length.max()
@@ -152,14 +157,14 @@ def main():
     training_data = torch.utils.data.DataLoader(
         train_dataset, batch_size=config.data.batch_size,
         # train_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
-        shuffle=config.data.shuffle, num_workers=num_workers)
+        shuffle=config.data.shuffle, num_workers=0)
     logger.info('Load Train Set!')
 
     dev_dataset = AudioDataset(config.data, 'dev')
     validate_data = torch.utils.data.DataLoader(
         dev_dataset, batch_size=config.data.batch_size,
         # dev_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
-        shuffle=False, num_workers=num_workers)
+        shuffle=False, num_workers=0)
     logger.info('Load Dev Set!')
 
     vocab = {}
@@ -215,6 +220,9 @@ def main():
     optimizer = Optimizer(model.parameters(), config.optim)
     logger.info('Created a %s optimizer.' % config.optim.type)
 
+    criterion = RNNTLoss()
+    logger.info('Created a RNNT loss.')
+
     if opt.mode == 'continue':
         optimizer.load_state_dict(checkpoint['optimizer'])
         start_epoch = checkpoint['epoch']
@@ -232,7 +240,7 @@ def main():
     for epoch in range(start_epoch, config.training.epochs):
 
         train(epoch, config, model, training_data,
-              optimizer, logger, visualizer)
+              optimizer, criterion, logger, visualizer)
 
         if config.training.eval_or_not:
             _ = eval(epoch, config, model, validate_data, logger, visualizer, vocab)

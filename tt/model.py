@@ -50,7 +50,7 @@ class Transducer(nn.Module):
         if config.share_embedding:
             assert self.decoder.embedding.weight.size() == self.joint.project_layer.weight.size(), '%d != %d' % (self.decoder.embedding.weight.size(1),  self.joint.project_layer.weight.size(1))
             self.joint.project_layer.weight = self.decoder.embedding.weight
-        self.crit = RNNTLoss()
+        # self.crit = RNNTLoss()
 
     def forward(self, inputs, inputs_length, targets, targets_length):
 
@@ -60,13 +60,8 @@ class Transducer(nn.Module):
 
         logits = self.joint(enc_state, dec_state)
 
-        # logits = logits.cpu()
-        # targets = targets.cpu()
-        # inputs_length = inputs_length.cpu()
-        # targets_length = targets_length.cpu()
-        loss = self.crit(logits, targets.int(), inputs_length.int(), targets_length.int())
-        print(loss.is_cuda)
-        return loss
+        # loss = self.crit(logits, targets.int(), inputs_length.int(), targets_length.int())
+        return logits
 
     def recognize(self, inputs, inputs_length):
         """
@@ -154,9 +149,5 @@ class Transducer(nn.Module):
         for i in range(batch_size):
             decoded_seq = decode(enc_states[i], inputs_length[i])
             results.append(decoded_seq)
-
-        # with open('decode.txt', 'w') as fid:
-        #     for line in results:
-        #         fid.write(str(line)+'\n')
 
         return results
