@@ -1,7 +1,9 @@
-egs/
-.idea/
-data/aishell
-data/thchs30
-data/joint
-data/*.wav
+/.idea/
+/data/*.wav
 decode.txt
+/data/thchs30/
+/data/aishell/
+/data/joint
+/config
+/egs
+

@@ -76,7 +76,6 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
                                                               grad_norm, loss.item(), avg_loss, end-start))
 
         del loss
-        break
 
         # break
     end_epoch = time.process_time()
@@ -152,7 +151,7 @@ def main():
     logger.info('Save config info.')
 
     # num_workers = config.training.num_gpu * config.data.batch_size
-    num_workers = config.data.batch_size
+    # num_workers = config.data.batch_size
     train_dataset = AudioDataset(config.data, 'train')
     training_data = torch.utils.data.DataLoader(
         train_dataset, batch_size=config.data.batch_size,

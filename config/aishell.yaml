@@ -56,7 +56,7 @@ training:
     max_grad_norm: 200
     visualization: True
     show_interval: 10
-    save_model: test
+    save_model: 4enc_1dec_256dim_1batch
 optim:
     type: sgd
     lr: 0.00025
