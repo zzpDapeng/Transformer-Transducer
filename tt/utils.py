@@ -141,15 +141,12 @@ def concat_frame(features, left_context_width, right_context_width):
     return concated_features
 
 
-def subsampling(features, frame_rate):
-    if frame_rate != 10:
-        interval = int(frame_rate / 10)
-        temp_mat = [features[i]
-                    for i in range(0, features.shape[0], interval)]
-        subsampled_features = np.row_stack(temp_mat)
-        return subsampled_features
-    else:
-        return features
+def subsampling(features, subsample=3):
+    interval = subsample
+    temp_mat = [features[i]
+                for i in range(0, features.shape[0], interval)]
+    subsampled_features = np.row_stack(temp_mat)
+    return subsampled_features
 
 
 def generate_dictionary(path):
@@ -174,20 +171,21 @@ def read_wave_from_file(audio_file):
     str_data = wav.readframes(num_frames)
     wav.close()
     wave_data = np.frombuffer(str_data, dtype=np.short)
-    return wave_data,framerate
+    return wave_data, framerate
 
 
-def get_feature(wave_data, framerate):
+def get_feature(wave_data, framerate, feature_dim=128):
     """
     :param wave_data: 一维numpy,dtype=int16
     :param framerate:
     :return: specgram [序列长度,特征维度]
     """
     wave_data = wave_data.astype("float32")
-    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=64)
+    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=feature_dim)
     specgram = np.ma.log(specgram).T
     specgram = specgram.filled(0)
     return specgram
+
 
 def dict_map(preds, vocab):
     res = np.empty(np.array(preds).shape,dtype=np.str)
@@ -197,11 +195,13 @@ def dict_map(preds, vocab):
             res[batch][i] = word
     return res.tolist()
 
+
 def write_result(preds, transcripts):
     with open("decode.txt", "a") as f:
         for batch in range(len(transcripts)):
             f.writelines("Transcripts:"+"".join(transcripts[batch])+"\n")
             f.writelines("---Predicts:"+"".join(preds[batch])+"\n")
+
 
 if __name__ == '__main__':
     a = np.random.randint(0,100,(1,10,8))

@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tt.encoder import BuildEncoder
 from tt.decoder import BuildDecoder
-from warprnnt_pytorch import RNNTLoss
-
 
 class JointNet(nn.Module):
     def __init__(self, input_size, inner_dim, vocab_size):

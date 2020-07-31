@@ -1,3 +1,5 @@
+##!/usr/bin/python3
+# -*- coding: utf-8 -*-
 import os
 import shutil
 import argparse
@@ -15,7 +17,6 @@ from tt.utils import AttrDict, init_logger, count_parameters, save_model, comput
 
 
 def train(epoch, config, model, training_data, optimizer, criterion, logger, visualizer=None):
-
     model.train()
     start_epoch = time.process_time()
     total_loss = 0
@@ -73,14 +74,14 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
             process = step / batch_steps * 100
             logger.info('-Training-Epoch:%d(%.5f%%), Global Step:%d, Learning Rate:%.6f, Grad Norm:%.5f, Loss:%.5f, '
                         'AverageLoss: %.5f, Run Time:%.3f' % (epoch, process, optimizer.global_step, optimizer.lr,
-                                                              grad_norm, loss.item(), avg_loss, end-start))
+                                                              grad_norm, loss.item(), avg_loss, end - start))
 
         del loss
 
         # break
     end_epoch = time.process_time()
     logger.info('-Training-Epoch:%d, Average Loss: %.5f, Epoch Time: %.3f' %
-                (epoch, total_loss / (step+1), end_epoch-start_epoch))
+                (epoch, total_loss / (step + 1), end_epoch - start_epoch))
 
 
 def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=None):
@@ -110,7 +111,6 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
             preds = dict_map(preds, vocab)
             transcripts = dict_map(transcripts, vocab)
 
-
         dist, num_words = computer_cer(preds, transcripts)
         total_dist += dist
         total_word += num_words
@@ -121,7 +121,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
             logger.info('-Validation-Epoch:%d(%.5f%%), CER: %.5f %%' % (epoch, process, cer))
             write_result(preds, transcripts)
 
-    val_loss = total_loss/(step+1)
+    val_loss = total_loss / (step + 1)
     logger.info('-Validation-Epoch:%4d, AverageLoss:%.5f , AverageCER: %.5f %%' %
                 (epoch, val_loss, cer))
 
@@ -134,7 +134,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     parser = argparse.ArgumentParser()
-    parser.add_argument('-config', type=str, default='config/aishell.yaml')
+    parser.add_argument('-config', type=str, default='config/myjoint.yaml')
     parser.add_argument('-log', type=str, default='train.log')
     parser.add_argument('-mode', type=str, default='retrain')
     opt = parser.parse_args()
@@ -167,7 +167,7 @@ def main():
     logger.info('Load Dev Set!')
 
     vocab = {}
-    with open(config.data.vocab,"r") as f:
+    with open(config.data.vocab, "r") as f:
         for line in f:
             parts = line.strip().split()
             word = parts[0]

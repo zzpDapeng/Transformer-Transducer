@@ -11,17 +11,18 @@ import time
 import json
 import math
 import torch
+import librosa
 import torchaudio
 import numpy as np
 from tqdm import tqdm
 import python_speech_features
 import matplotlib.pyplot as plt
 from specAugment import spec_augment_pytorch
-import librosa
-import speechpy
+from tt.utils import read_wave_from_file, get_feature, concat_frame, subsampling
 
 ROOT = "/mnt/32da6dad-b2d9-45a9-8959-49fff09a3aa3/speech_datasets/chinese"
 MY_ROOT = "/media/dapeng/文档/Dataset/中文语音数据集"
+
 
 def read_wav_data(filename):
     wav = wave.open(filename, 'rb')
@@ -35,7 +36,7 @@ def read_wav_data(filename):
     return wave_data, framerate
 
 
-def fbank_feature(wave_data,framerate,nfilt):
+def fbank_feature(wave_data, framerate, nfilt):
     feature = python_speech_features.logfbank(
         signal=wave_data,
         samplerate=framerate,
@@ -687,6 +688,60 @@ def audio_clip(limit_frame=300):
                     if frame_num <= limit_frame:
                         wf.writelines(line)
 
+
+def myjoint():
+    joint_root = 'joint/'
+    myjoint_root = 'myjoint/'
+    a = '/mnt/32da6dad-b2d9-45a9-8959-49fff09a3aa3/speech_datasets/chinese/'
+    b = '/media/dapeng/Downloads/DataSet/Audio/Chinese/'
+    subdirs = ['train', 'dev', 'test']
+    for subdir in subdirs:
+        sub_joint_root = os.path.join(joint_root, subdir, 'feats_clip40.scp')
+        sub_myjoint_root = os.path.join(myjoint_root, subdir, 'feats.scp')
+        with open(sub_myjoint_root,'w',encoding='utf-8') as wf:
+            with open(sub_joint_root,'r',encoding='utf-8') as rf:
+                for line in rf:
+                    line = line.replace(a, b)
+                    wf.writelines(line)
+
+
+def joint_feature():
+    joint_root = 'myjoint/' # TODO: Change to joint root
+    feature_save_root = '/media/dapeng/Downloads/DataSet/Audio/Chinese/joint_feature'
+    subdirs = ['train', 'dev', 'test']
+    left_context_width = 3
+    right_context_width = 0
+    subsample = 3
+    feature_dim = 128
+    for subdir in subdirs:
+        part = 0
+        num = 0
+        limit = 1000
+        feats_file = os.path.join(joint_root, subdir, 'feats.scp')
+        feats_feature = os.path.join(joint_root, subdir, 'feats_feature.scp')
+        save_path = ''
+        with open(feats_file, 'r', encoding='utf-8') as rf:
+            lines = rf.readlines()
+        with open(feats_feature, 'w', encoding='utf-8') as wf:
+            for line in tqdm(lines):
+                if num % limit == 0:
+                    save_path = os.path.join(feature_save_root, subdir, str(part))
+                    os.makedirs(save_path)
+                    part += 1
+                parts = line.strip().split(' ')
+                name = parts[0]
+                path = parts[1]
+                wave_data, frame_rate = read_wave_from_file(path)
+                features = get_feature(wave_data, frame_rate, feature_dim)
+                features = concat_frame(features, left_context_width, right_context_width)
+                features = subsampling(features, subsample)
+                save_file = os.path.join(save_path, name+'.npy')
+                np.save(save_file, features)
+                wf.writelines(name+' '+save_file+'\n')
+                num += 1
+        delete_final_line(feats_feature)
+
+
 if __name__ == '__main__':
     # my_aishell_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_aishell"
     # my_thchs30_root = "/media/dapeng/文档/Dataset/中文语音数据集/data_thchs30"
@@ -716,5 +771,7 @@ if __name__ == '__main__':
     # wave_data, rate = read_wav_data(audio)
     # print(wave_data.shape)
 
-    clip_targets(40)
+    # clip_targets(40)
     # audio_info()
+    # myjoint()
+    joint_feature()

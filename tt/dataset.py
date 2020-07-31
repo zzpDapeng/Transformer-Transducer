@@ -3,7 +3,7 @@ import copy
 import numpy as np
 import os
 import tt.kaldi_io as kaldi_io
-from tt.utils import get_feature, read_wave_from_file
+from tt.utils import get_feature, read_wave_from_file, concat_frame, subsampling
 import speechpy
 import python_speech_features
 
@@ -77,36 +77,36 @@ class Dataset:
         variance = stats[1, :-1] / stats[0, -1] - np.square(mean)
         return np.divide(np.subtract(mat, mean), np.sqrt(variance))
 
-    def concat_frame(self, features):
-        time_steps, features_dim = features.shape
-        concated_features = np.zeros(
-            shape=[time_steps, features_dim *
-                   (1 + self.left_context_width + self.right_context_width)],
-            dtype=np.float32)
-        # middle part is just the uttarnce
-        concated_features[:, self.left_context_width * features_dim:
-                          (self.left_context_width + 1) * features_dim] = features
-
-        for i in range(self.left_context_width):
-            # add left context
-            concated_features[i + 1:time_steps,
-                              (self.left_context_width - i - 1) * features_dim:
-                              (self.left_context_width - i) * features_dim] = features[0:time_steps - i - 1, :]
-
-        for i in range(self.right_context_width):
-            # add right context
-            concated_features[0:time_steps - i - 1,
-                              (self.right_context_width + i + 1) * features_dim:
-                              (self.right_context_width + i + 2) * features_dim] = features[i + 1:time_steps, :]
-
-        return concated_features
-
-    def subsampling(self, features):
-        interval = self.subsample
-        temp_mat = [features[i]
-                    for i in range(0, features.shape[0], interval)]
-        subsampled_features = np.row_stack(temp_mat)
-        return subsampled_features
+    # def concat_frame(self, features):
+    #     time_steps, features_dim = features.shape
+    #     concated_features = np.zeros(
+    #         shape=[time_steps, features_dim *
+    #                (1 + self.left_context_width + self.right_context_width)],
+    #         dtype=np.float32)
+    #     # middle part is just the uttarnce
+    #     concated_features[:, self.left_context_width * features_dim:
+    #                       (self.left_context_width + 1) * features_dim] = features
+    #
+    #     for i in range(self.left_context_width):
+    #         # add left context
+    #         concated_features[i + 1:time_steps,
+    #                           (self.left_context_width - i - 1) * features_dim:
+    #                           (self.left_context_width - i) * features_dim] = features[0:time_steps - i - 1, :]
+    #
+    #     for i in range(self.right_context_width):
+    #         # add right context
+    #         concated_features[0:time_steps - i - 1,
+    #                           (self.right_context_width + i + 1) * features_dim:
+    #                           (self.right_context_width + i + 2) * features_dim] = features[i + 1:time_steps, :]
+    #
+    #     return concated_features
+    #
+    # def subsampling(self, features):
+    #     interval = self.subsample
+    #     temp_mat = [features[i]
+    #                 for i in range(0, features.shape[0], interval)]
+    #     subsampled_features = np.row_stack(temp_mat)
+    #     return subsampled_features
 
 
 
@@ -153,8 +153,8 @@ class AudioDataset(Dataset):
             stats = self.cmvn_stats_dict[spk_id]
             features = self.cmvn(features, stats)
 
-        features = self.concat_frame(features)
-        features = self.subsampling(features)
+        features = concat_frame(features, self.left_context_width, self.right_context_width)
+        features = subsampling(features, self.subsample)
 
         inputs_length = np.array(features.shape[0]).astype(np.int64)
         targets_length = np.array(targets.shape[0]).astype(np.int64)
