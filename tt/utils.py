@@ -188,12 +188,14 @@ def get_feature(wave_data, framerate, feature_dim=128):
 
 
 def dict_map(preds, vocab):
-    res = np.empty(np.array(preds).shape,dtype=np.str)
+    res = []
     for batch in range(len(preds)):
+        batch_res = []
         for i in range(len(preds[batch])):
             word = vocab[preds[batch][i]]
-            res[batch][i] = word
-    return res.tolist()
+            batch_res.append(word)
+        res.append(batch_res)
+    return res
 
 
 def write_result(preds, transcripts):

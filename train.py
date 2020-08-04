@@ -6,6 +6,7 @@ import argparse
 import yaml
 import time
 import torch
+import numpy as np
 import torch.nn as nn
 import torch.utils.data
 from tt.model import Transducer
@@ -241,12 +242,12 @@ def main():
         train(epoch, config, model, training_data,
               optimizer, criterion, logger, visualizer)
 
-        if config.training.eval_or_not:
-            _ = eval(epoch, config, model, validate_data, logger, visualizer, vocab)
-
         save_name = os.path.join(exp_name, '%s.epoch%d.chkpt' % (config.training.save_model, epoch))
         save_model(model, optimizer, config, save_name)
         logger.info('Epoch %d model has been saved.' % epoch)
+
+        if config.training.eval_or_not:
+            _ = eval(epoch, config, model, validate_data, logger, visualizer, vocab)
 
         if epoch >= config.optim.begin_to_adjust_lr:
             optimizer.decay_lr()
