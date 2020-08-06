@@ -178,6 +178,7 @@ def get_feature(wave_data, framerate, feature_dim=128):
     """
     :param wave_data: 一维numpy,dtype=int16
     :param framerate:
+    :param feature_dim:
     :return: specgram [序列长度,特征维度]
     """
     wave_data = wave_data.astype("float32")

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from tt.encoder import BuildEncoder
 from tt.decoder import BuildDecoder
 
+
 class JointNet(nn.Module):
     def __init__(self, input_size, inner_dim, vocab_size):
         super(JointNet, self).__init__()
@@ -44,9 +45,10 @@ class Transducer(nn.Module):
             input_size=config.joint.input_size,
             inner_dim=config.joint.inner_size,
             vocab_size=config.vocab_size
-            )
+        )
         if config.share_embedding:
-            assert self.decoder.embedding.weight.size() == self.joint.project_layer.weight.size(), '%d != %d' % (self.decoder.embedding.weight.size(1),  self.joint.project_layer.weight.size(1))
+            assert self.decoder.embedding.weight.size() == self.joint.project_layer.weight.size(), '%d != %d' % (
+            self.decoder.embedding.weight.size(1), self.joint.project_layer.weight.size(1))
             self.joint.project_layer.weight = self.decoder.embedding.weight
         # self.crit = RNNTLoss()
 
@@ -77,6 +79,9 @@ class Transducer(nn.Module):
             zero_token = zero_token.cuda()
 
         def decode(enc_state, lengths):
+            """
+            enc_state： 2 dims without batch
+            """
             token_list = []
 
             dec_state = self.decoder(zero_token)
@@ -139,7 +144,7 @@ class Transducer(nn.Module):
 
                     if enc_state.is_cuda:
                         token = token.cuda()
-                    dec_state = self.decoder(token)[:, -1, :] # 历史信息输入，但是只取最后一个输出
+                    dec_state = self.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
 
             return token_list
 

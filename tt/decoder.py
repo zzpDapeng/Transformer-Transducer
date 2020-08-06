@@ -14,7 +14,7 @@ class BaseDecoder(nn.Module):
 
         self.MultiHeadAttention = RelLearnableDecoderLayer(n_head, d_model, d_head, d_inner, dropout, **kwargs)
 
-    def forward(self, inputs, attn_mask):
+    def forward(self, inputs, attn_mask=None):
 
         outputs = self.MultiHeadAttention(inputs, self.r_emb, self.r_w_bias, self.r_bias, attn_mask)
 

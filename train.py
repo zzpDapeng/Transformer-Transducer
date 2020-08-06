@@ -11,8 +11,8 @@ import torch.nn as nn
 import torch.utils.data
 from tt.model import Transducer
 from tt.optim import Optimizer
-from warprnnt_pytorch import RNNTLoss
 from tt.dataset import AudioDataset
+from warprnnt_pytorch import RNNTLoss
 from tensorboardX import SummaryWriter
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
 
