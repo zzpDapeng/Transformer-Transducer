@@ -137,7 +137,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-config', type=str, default='config/myjoint.yaml')
     parser.add_argument('-log', type=str, default='train.log')
-    parser.add_argument('-mode', type=str, default='retrain')
+    parser.add_argument('-mode', type=str, default='continue')
     opt = parser.parse_args()
 
     configfile = open(opt.config)
@@ -226,6 +226,9 @@ def main():
     if opt.mode == 'continue':
         optimizer.load_state_dict(checkpoint['optimizer'])
         start_epoch = checkpoint['epoch']
+        global_epoch = checkpoint['step']
+        optimizer.global_step = global_epoch
+        optimizer.current_epoch = start_epoch
         logger.info('Load Optimizer State!')
     else:
         start_epoch = 0
