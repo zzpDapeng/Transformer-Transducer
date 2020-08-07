@@ -124,19 +124,19 @@ def concat_frame(features, left_context_width, right_context_width):
         dtype=np.float32)
     # middle part is just the uttarnce
     concated_features[:, left_context_width * features_dim:
-                      (left_context_width + 1) * features_dim] = features
+                         (left_context_width + 1) * features_dim] = features
 
     for i in range(left_context_width):
         # add left context
         concated_features[i + 1:time_steps,
-                          (left_context_width - i - 1) * features_dim:
-                          (left_context_width - i) * features_dim] = features[0:time_steps - i - 1, :]
+        (left_context_width - i - 1) * features_dim:
+        (left_context_width - i) * features_dim] = features[0:time_steps - i - 1, :]
 
     for i in range(right_context_width):
         # add right context
         concated_features[0:time_steps - i - 1,
-                          (right_context_width + i + 1) * features_dim:
-                          (right_context_width + i + 2) * features_dim] = features[i + 1:time_steps, :]
+        (right_context_width + i + 1) * features_dim:
+        (right_context_width + i + 2) * features_dim] = features[i + 1:time_steps, :]
 
     return concated_features
 
@@ -199,18 +199,18 @@ def dict_map(preds, vocab):
     return res
 
 
-def write_result(preds, transcripts):
-    with open("decode.txt", "a") as f:
+def write_result(preds, transcripts, epoch):
+    with open("decode_" + str(epoch) + ".txt", "a") as f:
         for batch in range(len(transcripts)):
-            f.writelines("Transcripts:"+"".join(transcripts[batch])+"\n")
-            f.writelines("---Predicts:"+"".join(preds[batch])+"\n")
+            f.writelines("Transcripts:" + "".join(transcripts[batch]) + "\n")
+            f.writelines("---Predicts:" + "".join(preds[batch]) + "\n")
 
 
 if __name__ == '__main__':
-    a = np.random.randint(0,100,(1,10,8))
+    a = np.random.randint(0, 100, (1, 10, 8))
     print(a.shape)
     print(a)
-    b = concat_frame(a,3,0)
+    b = concat_frame(a, 3, 0)
     c = subsampling(b, 30)
     print(b.shape)
     print(b)

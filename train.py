@@ -120,7 +120,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
         if step % config.training.show_interval == 0:
             process = step / batch_steps * 100
             logger.info('-Validation-Epoch:%d(%.5f%%), CER: %.5f %%' % (epoch, process, cer))
-            write_result(preds, transcripts)
+            write_result(preds, transcripts, epoch)
 
     val_loss = total_loss / (step + 1)
     logger.info('-Validation-Epoch:%4d, AverageLoss:%.5f , AverageCER: %.5f %%' %
@@ -137,7 +137,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-config', type=str, default='config/myjoint.yaml')
     parser.add_argument('-log', type=str, default='train.log')
-    parser.add_argument('-mode', type=str, default='continue')
+    parser.add_argument('-mode', type=str, default='retrain')
     opt = parser.parse_args()
 
     configfile = open(opt.config)
@@ -242,12 +242,12 @@ def main():
 
     for epoch in range(start_epoch, config.training.epochs):
 
-        train(epoch, config, model, training_data,
-              optimizer, criterion, logger, visualizer)
-
-        save_name = os.path.join(exp_name, '%s.epoch%d.chkpt' % (config.training.save_model, epoch))
-        save_model(model, optimizer, config, save_name)
-        logger.info('Epoch %d model has been saved.' % epoch)
+        # train(epoch, config, model, training_data,
+        #       optimizer, criterion, logger, visualizer)
+        #
+        # save_name = os.path.join(exp_name, '%s.epoch%d.chkpt' % (config.training.save_model, epoch))
+        # save_model(model, optimizer, config, save_name)
+        # logger.info('Epoch %d model has been saved.' % epoch)
 
         if config.training.eval_or_not:
             _ = eval(epoch, config, model, validate_data, logger, visualizer, vocab)
