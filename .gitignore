@@ -4,6 +4,11 @@ decode.txt
 /data/thchs30/
 /data/aishell/
 /data/joint/
-/config
+/config/myjoint.yaml
+/config/thchs30.yaml
 /egs
 /data/myjoint/
+将删除 decoder.pt
+将删除 encoder.pt
+将删除 joint.pt
+将删除 tt/__pycache__/
