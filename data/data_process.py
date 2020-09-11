@@ -106,9 +106,7 @@ def generate_aishell_feature2(wav_path):
 
 def test_different_feature():
     magic_audio = "/media/dapeng/文档/Dataset/中文语音数据集/magicdata/dev/5_1812/5_1812_20170628135834.wav"
-    record_audio = 'output.wav'
-    record_audio = 'output.wav'
-
+    record_audio = 'output_15s.wav'
 
     test_audio = magic_audio
 
@@ -204,7 +202,7 @@ def test_different_dataset():
     thchs30 = "/media/dapeng/文档/Dataset/中文语音数据集/data_thchs30/data/A11_0.wav"
     primewords = "/media/dapeng/文档/Dataset/中文语音数据集/primewords_md_2018_set1/audio_files/0/00/00a1ca32-3ad8-4f62-bb16-7346fca03444.wav"
     st_cmds = "/media/dapeng/文档/Dataset/中文语音数据集/ST-CMDS-20170001_1-OS/20170001P00200I0089.wav"
-    record_audio = 'output.wav'
+    record_audio = 'output_15s.wav'
 
     specgram1 = wave_librosa_logmel(magic_audio)
     plt.subplot(3, 2, 1)

@@ -8,11 +8,9 @@
 import yaml
 import torch
 from tt.model import Transducer
-from tt.optim import Optimizer
-from tt.dataset import AudioDataset
 from tt.utils import AttrDict
 
-config_file = open("config/joint.yaml")
+config_file = open("../config/joint.yaml")
 config = AttrDict(yaml.load(config_file, Loader=yaml.FullLoader))
 model = Transducer(config.model)
 

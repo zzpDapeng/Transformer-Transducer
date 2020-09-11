@@ -3,7 +3,7 @@
 @Descriptions: 调用TT模型进行流式语音识别
 @Author:Dapeng
 @Contact:zzp_dapeng@163.com
-@Time:2020/7/7 下午3:10 
+@Time:2020/7/7 下午3:10
 """
 import time
 import math
@@ -90,7 +90,6 @@ class StreamRec:
 
     def __callback(self, in_data, frame_count, time_info, status):
         chunk_data = np.frombuffer(in_data, dtype=np.short)
-        print(self.audio_data.shape, chunk_data.shape)
         self.audio_data = np.concatenate((self.audio_data, chunk_data), axis=0)
         self.frame_num += frame_count
         # 到达录制时间，停止
@@ -136,7 +135,6 @@ class StreamRec:
 
                 enc_states_len = win_enc_states.shape[1]
                 for t in range(enc_states_len):
-                    print("decode_state.shape", dec_state.shape)
                     logits = self.model.joint(win_enc_states[:, t, :].view(-1), dec_state.view(-1))
                     out = torch.nn.functional.softmax(logits, dim=0).detach()
                     pred = torch.argmax(out, dim=0)

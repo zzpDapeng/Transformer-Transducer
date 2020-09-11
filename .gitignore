@@ -8,6 +8,7 @@ decode.txt
 /config/thchs30.yaml
 /egs
 /data/myjoint/
+*.chkpt
 将删除 decoder.pt
 将删除 encoder.pt
 将删除 joint.pt
