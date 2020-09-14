@@ -4,6 +4,7 @@ feature_type: logmel
 data:
     name: joint
     vocab: data/joint/grapheme_table.txt
+    feature_dim: 64
     left_context_width: 3
     right_context_width: 0
     subsample: 3

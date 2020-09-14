@@ -45,13 +45,23 @@ class BuildEncoder(nn.Module):
     def forward(self, inputs):
         inputs = torch.transpose(inputs, 0, 1)
 
-        # audio mask
+        # wrong audio mask
+        # qlen = inputs.size(0)
+        # up = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=10 + 1)
+        # down = torch.tril(inputs.new_ones([qlen, qlen]), diagonal=-(2 + 1))
+        # enc_attn_mask = ~(up + down).bool()[:, :, None]
+        # print(enc_attn_mask.shape)
+        # print(enc_attn_mask)
+
         qlen = inputs.size(0)
-        up = torch.triu(inputs.new_ones(qlen, qlen), diagonal=10 + 1)
-        down = torch.tril(inputs.new_ones(qlen, qlen), diagonal=-(2 + 1))
-        enc_attn_mask = ~(up + down).bool()[:, :, None]
+        up = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=2 + 1)
+        down = torch.tril(inputs.new_ones([qlen, qlen]), diagonal=-3 - 1)
+        enc_attn_mask = (up + down).bool()[:, :, None]
+        print(enc_attn_mask.shape)
+        print(enc_attn_mask)
 
         for layer in self.layers:
             inputs = layer(inputs, enc_attn_mask)
+            # inputs = layer(inputs)
 
         return torch.transpose(inputs, 0, 1)

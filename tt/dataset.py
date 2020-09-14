@@ -12,6 +12,7 @@ class Dataset:
 
         self.type = type
         self.name = config.name
+        self.feature_dim = config.feature_dim
         self.left_context_width = config.left_context_width
         self.right_context_width = config.right_context_width
         self.subsample = config.subsample
@@ -141,7 +142,7 @@ class AudioDataset(Dataset):
 
         targets = np.array(seq)
         wave_data, frame_rate= read_wave_from_file(feats_scp)
-        features = get_feature(wave_data, frame_rate)
+        features = get_feature(wave_data, frame_rate, self.feature_dim)
 
         # features = np.load(feats_scp)
         # features = kaldi_io.read_mat(feats_scp)

@@ -49,9 +49,24 @@
 # trans = dict_map(trans,dic)
 # write_result(pred,trans)
 
+# import numpy as np
+# a = np.array([1.,2.,0.])
+# a = np.ma.log(a).T
+# a = a.filled(0)
+# print(a.shape)
+# print(type(a))
+
+
+# mask矩阵
+import torch
 import numpy as np
-a = np.array([1.,2.,0.])
-a = np.ma.log(a).T
-a = a.filled(0)
-print(a.shape)
-print(type(a))
+inputs = torch.randn([10, 4, 256])
+
+qlen = inputs.size(0)
+up = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=2+1)
+down = torch.tril(inputs.new_ones([qlen, qlen]), diagonal=-3-1)
+# enc_attn_mask = (up + down).bool()[:, :, None]
+enc_attn_mask = (up + down)
+print(enc_attn_mask.shape)
+print(enc_attn_mask)
+

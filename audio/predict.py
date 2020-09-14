@@ -10,7 +10,8 @@ import torch
 from tt.utils import AttrDict, read_wave_from_file, get_feature, concat_frame, subsampling, dict_map
 from tt.model import Transducer
 
-WAVE_OUTPUT_FILENAME = 'audio/output.wav'
+# WAVE_OUTPUT_FILENAME = 'audio/output.wav'
+WAVE_OUTPUT_FILENAME = '/media/dapeng/Downloads/DataSet/Audio/Chinese/data_aishell/wav/test/S0764/BAC009S0764W0121.wav'
 
 
 def init_model():

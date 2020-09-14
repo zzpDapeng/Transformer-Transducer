@@ -43,7 +43,6 @@ class BuildDecoder(nn.Module):
         qlen, dez = inputs.size(0), inputs.size(1)
         attn_mask = torch.triu(inputs.new_ones(qlen, qlen), diagonal=1).bool()[:, :, None]
         # attn_mask = torch.triu(inputs.new_ones(qlen, klen), diagonal=1).bool()[:, :, None]  # todo：包括主对角线 报错nan
-
         for layer in self.layers:
             inputs = layer(inputs, attn_mask)
 

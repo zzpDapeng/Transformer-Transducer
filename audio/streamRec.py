@@ -55,7 +55,7 @@ class StreamRec:
         self.audio_data = np.empty((0,), dtype=np.short)  # 使用numpy存储录制的音频数据
         self.frame_num = 0  # 记录当前录制的音频帧总数
 
-        self.win_len = math.ceil(self.rate / self.chunk) * self.chunk  # 滑动窗口长度（单位：帧数），窗口长度设为镇速率，则窗口长度为1秒
+        self.win_len = math.ceil(self.rate / self.chunk) * self.chunk  # 滑动窗口长度（单位：帧数），窗口长度设为帧速率，则窗口长度为1秒
         self.step_len = self.win_len - self.layer_num * (self.right_mask + self.left_mask)  # 推算出的步长
         self.win_position = 0  # 滑动窗口当前的的起始位置（单位：帧）
 
