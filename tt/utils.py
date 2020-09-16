@@ -1,10 +1,10 @@
-import torch
-import wave
 import logging
-import librosa
+import wave
+
 import editdistance
+import librosa
 import numpy as np
-import python_speech_features
+import torch
 
 
 class AttrDict(dict):
@@ -150,7 +150,8 @@ def subsampling(features, subsample=3):
 
 
 def generate_dictionary(path):
-    dictionary = {}
+    index2word = {}
+    word2index = {}
     with open(path, 'r') as f:
         lines = f.readlines()
     for line in lines:
@@ -158,8 +159,9 @@ def generate_dictionary(path):
         index = word_index[1]
         index = int(index)
         word = word_index[0]
-        dictionary[index] = word
-    return dictionary
+        index2word[index] = word
+        word2index[word] = index
+    return index2word, word2index
 
 
 def read_wave_from_file(audio_file):
@@ -206,6 +208,43 @@ def write_result(preds, transcripts, epoch):
             f.writelines("---Predicts:" + "".join(preds[batch]) + "\n")
 
 
+def look_ahead_mask(label):
+    seq_len = label.size(1)
+    mask_look_ahead = torch.triu(label.new_ones([seq_len, seq_len]), diagonal=1).bool()
+    return mask_look_ahead
+
+
+def context_mask(audio, left_context=10, right_context=2):
+    seq_len = audio.size(1)
+    up = torch.triu(audio.new_ones([seq_len, seq_len]), diagonal=right_context + 1)
+    down = torch.tril(audio.new_ones([seq_len, seq_len]), diagonal=-left_context - 1)
+    mask_context = (up + down).bool()
+    return mask_context
+
+
+def padding_mask(inputs):
+    if inputs.dim() == 2:
+        zero = torch.zeros_like(inputs)
+        one = torch.ones_like(inputs)
+        mask_padding = torch.where(inputs == 0, one, zero).bool()
+    else:
+        zero = torch.zeros_like(inputs[:, :, 0])
+        one = torch.ones_like(inputs[:, :, 0])
+        mask_padding = torch.sum(inputs, dim=-1)
+        mask_padding = torch.where(mask_padding == 0., one, zero).bool()
+    return mask_padding
+
+
+def create_mask(audio, label, left_context, right_context):
+    audio_padding_mask = padding_mask(audio)
+    audio_context_mask = context_mask(audio, left_context, right_context)
+    audio_mask = torch.max(audio_context_mask[None, :, :], audio_padding_mask[:, :, None])
+    label_padding_mask = padding_mask(label)
+    label_look_ahead_mask = look_ahead_mask(label)
+    label_mask = torch.max(label_look_ahead_mask[None, :, :], label_padding_mask[:, :, None])
+    return audio_mask, label_mask
+
+
 if __name__ == '__main__':
     a = np.random.randint(0, 100, (1, 10, 8))
     print(a.shape)
@@ -216,3 +255,39 @@ if __name__ == '__main__':
     print(b)
     print(c.shape)
     print(c)
+
+    # 测试mask
+    a1 = torch.randn([2, 8, 512])
+    a21 = torch.randn([1, 2, 512])
+    a22 = torch.zeros([1, 2, 512])
+    a2 = torch.cat([a21, a22], dim=0)
+    a = torch.cat([a1, a2], dim=1)
+    mask_padding = padding_mask(a)
+    print("audio padding mask")
+    print(mask_padding.shape)
+    print(mask_padding)
+
+    c_mask = context_mask(a, 3, 2)
+    print('\naudio context mask')
+    print(c_mask.shape)
+    print(c_mask)
+
+    l = torch.tensor([[5, 6, 7, 3, 4, 1, 2, 4, 3, 8],
+                      [5, 6, 7, 3, 4, 1, 2, 4, 0, 0]])
+    mask_padding = padding_mask(l)
+    print("\nlabel padding mask")
+    print(mask_padding.shape)
+    print(mask_padding)
+
+    mask_look_ahead = look_ahead_mask(l)
+    print("\nlabel look ahead mask")
+    print(mask_look_ahead.shape)
+    print(mask_look_ahead)
+
+    audio_mask, label_mask = create_mask(a, l, 3, 2)
+    print("\naudio mask")
+    print(audio_mask.shape)
+    print(audio_mask)
+    print("\nlabel mask")
+    print(label_mask.shape)
+    print(label_mask)

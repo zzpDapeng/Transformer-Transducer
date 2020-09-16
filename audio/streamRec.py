@@ -32,7 +32,7 @@ class StreamRec:
         # 模型
         self.__init_model()
         print("加载字典...")
-        self.dictionary = generate_dictionary('data/aishell/grapheme_table.txt')
+        self.dictionary, _ = generate_dictionary('data/aishell/grapheme_table.txt')
         print("字典加载完毕")
 
         # 音频参数

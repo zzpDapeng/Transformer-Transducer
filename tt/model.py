@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from tt.encoder import BuildEncoder
+
 from tt.decoder import BuildDecoder
+from tt.encoder import BuildEncoder
+from tt.utils import create_mask
 
 
 class JointNet(nn.Module):
@@ -48,19 +50,19 @@ class Transducer(nn.Module):
         )
         if config.share_embedding:
             assert self.decoder.embedding.weight.size() == self.joint.project_layer.weight.size(), '%d != %d' % (
-            self.decoder.embedding.weight.size(1), self.joint.project_layer.weight.size(1))
+                self.decoder.embedding.weight.size(1), self.joint.project_layer.weight.size(1))
             self.joint.project_layer.weight = self.decoder.embedding.weight
-        # self.crit = RNNTLoss()
 
-    def forward(self, inputs, inputs_length, targets, targets_length):
+    def forward(self, inputs, targets):
+        concat_targets = F.pad(targets, pad=[1, 0, 0, 0], value=6485)
+        audio_mask, label_mask = create_mask(inputs, concat_targets, self.config.enc.left_context,
+                                             self.config.enc.right_context)
 
-        enc_state = self.encoder(inputs)
-        concat_targets = F.pad(targets, pad=[1, 0, 0, 0], value=0)
-        dec_state = self.decoder(concat_targets)
+        enc_state = self.encoder(inputs, audio_mask)
+        dec_state = self.decoder(concat_targets, label_mask)
 
         logits = self.joint(enc_state, dec_state)
 
-        # loss = self.crit(logits, targets.int(), inputs_length.int(), targets_length.int())
         return logits
 
     def recognize(self, inputs, inputs_length):

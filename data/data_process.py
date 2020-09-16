@@ -10,6 +10,8 @@ import wave
 import time
 import json
 import math
+
+import pandas
 import torch
 import librosa
 import torchaudio
@@ -738,6 +740,41 @@ def joint_feature():
                 wf.writelines(name+' '+save_file+'\n')
                 num += 1
         delete_final_line(feats_feature)
+
+
+def merge_csv(data_path='data/'):
+    sub_paths = ['train', 'dev', 'test']
+    for sub_path in sub_paths:
+        dict_audio = {}
+        dict_label = {}
+        feats = os.path.join(data_path, sub_path, 'feats.scp')
+        grapheme = os.path.join(data_path, sub_path, 'grapheme.txt')
+        with open(feats, encoding='utf-8') as f:
+            lines = f.readlines()
+        for line in tqdm(lines):
+            parts = line.strip().split(' ')
+            audio_id = parts[0]
+            audio_path = parts[-1]
+            dict_audio[audio_id] = audio_path
+        with open(grapheme, encoding='utf-8') as g:
+            lines = g.readlines()
+        for line in tqdm(lines):
+            parts = line.strip().split(' ')
+            audio_id = parts[0]
+            audio_label = ''.join(parts[1:])
+            dict_label[audio_id] = audio_label
+        audio_list = []
+        label_list = []
+        for key in tqdm(dict_audio):
+            audio_list.append(dict_audio[key])
+            label_list.append(dict_label[key])
+        dic = {
+            'file_path': audio_list,
+            'label': label_list
+        }
+        df = pandas.DataFrame(dic)
+        print(df.head(5))
+        df.to_csv(os.path.join(data_path, sub_path + '.csv'), index=False)
 
 
 if __name__ == '__main__':

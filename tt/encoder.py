@@ -42,26 +42,18 @@ class BuildEncoder(nn.Module):
             dropout=config.dropout)
             for i in range(config.enc.n_layer)])
 
-    def forward(self, inputs):
+    def forward(self, inputs, mask=None):
         inputs = torch.transpose(inputs, 0, 1)
+        mask = mask.permute(1, 2, 0)
 
-        # wrong audio mask
         # qlen = inputs.size(0)
-        # up = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=10 + 1)
-        # down = torch.tril(inputs.new_ones([qlen, qlen]), diagonal=-(2 + 1))
-        # enc_attn_mask = ~(up + down).bool()[:, :, None]
-        # print(enc_attn_mask.shape)
-        # print(enc_attn_mask)
-
-        qlen = inputs.size(0)
-        up = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=2 + 1)
-        down = torch.tril(inputs.new_ones([qlen, qlen]), diagonal=-3 - 1)
-        enc_attn_mask = (up + down).bool()[:, :, None]
-        print(enc_attn_mask.shape)
-        print(enc_attn_mask)
+        # up = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=2 + 1)
+        # down = torch.tril(inputs.new_ones([qlen, qlen]), diagonal=-3 - 1)
+        # enc_attn_mask = (up + down).bool()[:, :, None]
+        # print('audio mask shape:', mask.shape)
 
         for layer in self.layers:
-            inputs = layer(inputs, enc_attn_mask)
-            # inputs = layer(inputs)
+            inputs = layer(inputs, mask)
+            # inputs = layer(inputs, enc_attn_mask)
 
         return torch.transpose(inputs, 0, 1)

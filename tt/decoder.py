@@ -36,14 +36,17 @@ class BuildDecoder(nn.Module):
             dropout=config.dropout)
             for i in range(config.dec.n_layer)])
 
-    def forward(self, inputs):
+    def forward(self, inputs, mask=None):
         inputs = self.dec_embedding(inputs)
         inputs = torch.transpose(inputs, 0, 1)
+        mask = mask.permute(1, 2, 0)
 
-        qlen, dez = inputs.size(0), inputs.size(1)
-        attn_mask = torch.triu(inputs.new_ones(qlen, qlen), diagonal=1).bool()[:, :, None]
-        # attn_mask = torch.triu(inputs.new_ones(qlen, klen), diagonal=1).bool()[:, :, None]  # todo：包括主对角线 报错nan
+        # qlen = inputs.size(0)
+        # attn_mask = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=1).bool()[:, :, None]
+        # print('label mask shape:', mask.shape)
+
         for layer in self.layers:
-            inputs = layer(inputs, attn_mask)
+            # inputs = layer(inputs, attn_mask)
+            inputs = layer(inputs, mask)
 
         return torch.transpose(inputs, 0, 1)

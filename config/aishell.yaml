@@ -6,12 +6,13 @@ data:
     vocab: data/aishell/grapheme_table.txt
     left_context_width: 3
     right_context_width: 0
+    feature_dim: 128
     subsample: 3
     apply_cmvn: False
-    max_input_length: 500  # 最大490
-    max_target_length: 40  # 最大44
-    batch_size: 1
-    short_first: True
+    max_input_length: 410  # 最大490
+    max_target_length: 42  # 最大44
+    batch_size: 4
+    short_first: False
     shuffle: True
     train: data/aishell/train
     dev: data/aishell/dev
@@ -20,28 +21,28 @@ model:
     type: transducer
     enc:
         type: attention
-        max_input_length: 500
+        max_input_length: 410
         hidden_size:
         output_size:
-        d_inner: 256
+        d_inner: 512
         n_head: 8
-        d_model: 256
-        d_head: 32
+        d_model: 512
+        d_head: 64
         n_layer: 4
     dec:
         type: attention
-        max_target_length: 40
+        max_target_length: 42
         hidden_size:
         output_size:
-        d_inner: 256
+        d_inner: 512
         n_head: 8
-        d_model: 256
-        d_head: 32
+        d_model: 512
+        d_head: 64
         n_layer: 1
     joint:
-        input_size: 512
-        inner_size: 256
-    vocab_size: 4334
+        input_size: 1024
+        inner_size: 512
+    vocab_size: 6485
     share_weight: False
     feature_dim:
     dropout: 0.1
@@ -52,11 +53,11 @@ training:
     eval_or_not: True
     seed: 1
     num_gpu: 1
-    epochs: 20
+    epochs: 30
     max_grad_norm: 200
     visualization: True
     show_interval: 10
-    save_model: 4enc_1dec_256dim_1batch
+    save_model: 8enc_1dec_512fea_512inner_4batch
 optim:
     type: sgd
     lr: 0.00025

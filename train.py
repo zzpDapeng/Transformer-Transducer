@@ -1,20 +1,22 @@
 ##!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import argparse
 import os
 import shutil
-import argparse
-import yaml
 import time
+
 import torch
-import numpy as np
 import torch.nn as nn
 import torch.utils.data
+import yaml
+from tensorboardX import SummaryWriter
+from warprnnt_pytorch import RNNTLoss
+
+from tt.dataset import AudioDataset
 from tt.model import Transducer
 from tt.optim import Optimizer
-from tt.dataset import AudioDataset
-from warprnnt_pytorch import RNNTLoss
-from tensorboardX import SummaryWriter
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
+from tt.utils import generate_dictionary
 
 
 def train(epoch, config, model, training_data, optimizer, criterion, logger, visualizer=None):
@@ -42,9 +44,8 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
 
         optimizer.zero_grad()
 
-        logits = model(inputs, inputs_length, targets, targets_length)
-
-        loss = criterion(logits, targets.int(), inputs_length.int(), targets_length.int())
+        logits = model(inputs, targets[:, :-1])
+        loss = criterion(logits, targets[:, 1:].int(), inputs_length.int(), targets_length.int()-1)
 
         if config.training.num_gpu > 1:
             loss = torch.mean(loss)
@@ -64,10 +65,10 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
                 'train_loss', loss.item(), optimizer.global_step)
             visualizer.add_scalar(
                 'learn_rate', optimizer.lr, optimizer.global_step)
-            visualizer.add_histogram('inputs', inputs, optimizer.global_step)
-            visualizer.add_histogram('inputs_length', inputs_length, optimizer.global_step)
-            visualizer.add_histogram('targets', targets, optimizer.global_step)
-            visualizer.add_histogram('targets_length', targets_length, optimizer.global_step)
+            # visualizer.add_histogram('inputs', inputs, optimizer.global_step)
+            # visualizer.add_histogram('inputs_length', inputs_length, optimizer.global_step)
+            # visualizer.add_histogram('targets', targets, optimizer.global_step)
+            # visualizer.add_histogram('targets_length', targets_length, optimizer.global_step)
 
         avg_loss = total_loss / (step + 1)
         if optimizer.global_step % config.training.show_interval == 0:
@@ -121,7 +122,6 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
             process = step / batch_steps * 100
             logger.info('-Validation-Epoch:%d(%.5f%%), CER: %.5f %%' % (epoch, process, cer))
             write_result(preds, transcripts, epoch)
-
     val_loss = total_loss / (step + 1)
     logger.info('-Validation-Epoch:%4d, AverageLoss:%.5f , AverageCER: %.5f %%' %
                 (epoch, val_loss, cer))
@@ -151,30 +151,24 @@ def main():
     shutil.copyfile(opt.config, os.path.join(exp_name, 'config.yaml'))
     logger.info('Save config info.')
 
+    index2word, word2index = generate_dictionary(config.data.vocab)
+    logger.info('Load Vocabulary!')
+
     # num_workers = config.training.num_gpu * config.data.batch_size
     # num_workers = config.data.batch_size
-    train_dataset = AudioDataset(config.data, 'train')
+    train_dataset = AudioDataset(config.data, 'train', word2index)
     training_data = torch.utils.data.DataLoader(
         train_dataset, batch_size=config.data.batch_size,
         # train_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
-        shuffle=config.data.shuffle, num_workers=0)
+        shuffle=config.data.shuffle, num_workers=12)
     logger.info('Load Train Set!')
 
-    dev_dataset = AudioDataset(config.data, 'dev')
+    dev_dataset = AudioDataset(config.data, 'dev', word2index)
     validate_data = torch.utils.data.DataLoader(
         dev_dataset, batch_size=config.data.batch_size,
         # dev_dataset, batch_size=config.data.batch_size * config.training.num_gpu,
-        shuffle=False, num_workers=0)
+        shuffle=False, num_workers=12)
     logger.info('Load Dev Set!')
-
-    vocab = {}
-    with open(config.data.vocab, "r") as f:
-        for line in f:
-            parts = line.strip().split()
-            word = parts[0]
-            index = int(parts[1])
-            vocab[index] = word
-    logger.info('Load Vocabulary!')
 
     if config.training.num_gpu > 0:
         torch.cuda.manual_seed(config.training.seed)
@@ -250,7 +244,7 @@ def main():
         logger.info('Epoch %d model has been saved.' % epoch)
 
         if config.training.eval_or_not:
-            _ = eval(epoch, config, model, validate_data, logger, visualizer, vocab)
+            _ = eval(epoch, config, model, validate_data, logger, visualizer, index2word)
 
         if epoch >= config.optim.begin_to_adjust_lr:
             optimizer.decay_lr()
