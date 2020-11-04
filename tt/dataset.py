@@ -55,17 +55,6 @@ class Dataset:
                 'Features in inputs list must be one vector or two dimension matrix! ')
         return padded_inputs
 
-    # # from feats.txt extract feats_list which correspond with utt_id
-    # def get_feats_list(self):
-    #     feats_list = []
-    #     feats_dict = {}
-    #     with open(self.arkscp, 'r') as fid:
-    #         for line in fid:
-    #             key, path = line.strip().split(' ')
-    #             feats_list.append(key)
-    #             feats_dict[key] = path
-    #     return feats_list, feats_dict
-
     def get_cmvn_dict(self):
         cmvn_reader = kaldi_io.read_mat_scp(self.cmvnscp)
         for spkid, stats in cmvn_reader:
@@ -114,11 +103,11 @@ class AudioDataset(Dataset):
 
     # 将sym 序列编码为idx
     def encode(self, seq):
-        encoded_seq = [self.word2index.get('<SOS>')]
+        # encoded_seq = [self.word2index.get('<SOS>')]
+        encoded_seq = []
         for unit in seq:
             if unit in self.word2index:
                 encoded_seq.append(self.word2index[unit])
             else:
                 encoded_seq.append(self.word2index['<unk>'])  # TODO：没有设置该标志
-        encoded_seq.append(self.word2index.get('<EOS>'))
         return encoded_seq

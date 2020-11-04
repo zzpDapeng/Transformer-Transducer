@@ -39,14 +39,8 @@ class BuildDecoder(nn.Module):
     def forward(self, inputs, mask=None):
         inputs = self.dec_embedding(inputs)
         inputs = torch.transpose(inputs, 0, 1)
-        mask = mask.permute(1, 2, 0)
-
-        # qlen = inputs.size(0)
-        # attn_mask = torch.triu(inputs.new_ones([qlen, qlen]), diagonal=1).bool()[:, :, None]
-        # print('label mask shape:', mask.shape)
 
         for layer in self.layers:
-            # inputs = layer(inputs, attn_mask)
             inputs = layer(inputs, mask)
 
         return torch.transpose(inputs, 0, 1)

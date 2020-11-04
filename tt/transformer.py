@@ -179,11 +179,9 @@ class RelLearnableMultiHeadAttn(RelMultiHeadAttn):
         # compute attention probability
         if attn_mask is not None and attn_mask.any().item():
             if attn_mask.dim() == 2:
-                # attn_score.masked_fill_(attn_mask[None, :, :, None], -float('inf'))  # look_ahead_mask & context_mask
-                attn_score += (attn_mask[None, :, :, None] * -1e9)
+                attn_score.masked_fill_(attn_mask[None, :, :, None], -float('inf'))  # context mask (seq, batch)
             elif attn_mask.dim() == 3:
-                # attn_score.masked_fill_(attn_mask[:, :, :, None], -float('inf'))  # padding_mask TODO:检查维度填充是否合理
-                attn_score += (attn_mask[:, :, :, None] * -1e9)
+                attn_score.masked_fill_(attn_mask[:, :, :, None], -float('inf'))  # (seq, seq, batch)
 
         attn_prob = F.softmax(attn_score, dim=1)
         attn_prob = self.dropatt(attn_prob)

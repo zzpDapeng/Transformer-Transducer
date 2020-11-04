@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from tt.decoder import BuildDecoder
 from tt.encoder import BuildEncoder
 from tt.utils import create_mask
+from tt.utils import look_ahead_mask, context_mask
 
 
 class JointNet(nn.Module):
@@ -17,7 +18,7 @@ class JointNet(nn.Module):
 
     def forward(self, enc_state, dec_state):
         if enc_state.dim() == 3 and dec_state.dim() == 3:
-            dec_state = dec_state.unsqueeze(1)
+            dec_state = dec_state.unsqueeze(1)  # 添加维度1
             enc_state = enc_state.unsqueeze(2)
 
             t = enc_state.size(1)
@@ -54,12 +55,13 @@ class Transducer(nn.Module):
             self.joint.project_layer.weight = self.decoder.embedding.weight
 
     def forward(self, inputs, targets):
-        concat_targets = F.pad(targets, pad=[1, 0, 0, 0], value=6485)
-        audio_mask, label_mask = create_mask(inputs, concat_targets, self.config.enc.left_context,
-                                             self.config.enc.right_context)
-
-        enc_state = self.encoder(inputs, audio_mask)
-        dec_state = self.decoder(concat_targets, label_mask)
+        targets = F.pad(targets, pad=[1, 0, 0, 0], value=0)
+        # 流式语音识别
+        # audio_mask = context_mask(inputs)[:, :, None]
+        # 非流式语音识别
+        label_mask = look_ahead_mask(targets)[:, :, None]
+        enc_state = self.encoder(inputs)
+        dec_state = self.decoder(targets, label_mask)
 
         logits = self.joint(enc_state, dec_state)
 
@@ -67,63 +69,12 @@ class Transducer(nn.Module):
 
     def recognize(self, inputs, inputs_length):
         """
-        batch分开,识别只关注上一个输出
-        :param inputs:
-        :param inputs_length:
-        :return:
-        """
-        batch_size = inputs.size(0)
-
-        enc_states = self.encoder(inputs)
-
-        zero_token = torch.LongTensor([[0]])
-        if inputs.is_cuda:
-            zero_token = zero_token.cuda()
-
-        def decode(enc_state, lengths):
-            """
-            enc_state： 2 dims without batch
-            """
-            token_list = []
-
-            dec_state = self.decoder(zero_token)
-
-            for t in range(lengths):
-                logits = self.joint(enc_state[t].view(-1), dec_state.view(-1))
-                out = F.softmax(logits, dim=0).detach()
-                pred = torch.argmax(out, dim=0)
-                pred = int(pred.item())
-                if pred != 0:
-                    token_list.append(pred)
-                    token = torch.LongTensor([[pred]])
-
-                    if enc_state.is_cuda:
-                        token = token.cuda()
-
-                    dec_state = self.decoder(token)
-
-            return token_list
-
-        results = []
-        for i in range(batch_size):
-            decoded_seq = decode(enc_states[i], inputs_length[i])
-            results.append(decoded_seq)
-
-        # with open('decode.txt', 'w') as fid:
-        #     for line in results:
-        #         fid.write(str(line)+'\n')
-
-        return results
-
-    def recognize2(self, inputs, inputs_length):
-        """
         batch分开，识别关注之前所有的输出
         :param inputs:
         :param inputs_length:
         :return:
         """
         batch_size = inputs.size(0)
-
         enc_states = self.encoder(inputs)
 
         zero_token = torch.tensor([[0]], dtype=torch.long)
@@ -133,7 +84,6 @@ class Transducer(nn.Module):
         def decode(enc_state, lengths):
             token_list = []
             dec_state = self.decoder(zero_token)[:, -1, :]
-
             for t in range(lengths):
                 logits = self.joint(enc_state[t].view(-1), dec_state.view(-1))
                 out = F.softmax(logits, dim=0).detach()
@@ -151,8 +101,8 @@ class Transducer(nn.Module):
             return token_list
 
         results = []
-        for i in range(batch_size):
-            decoded_seq = decode(enc_states[i], inputs_length[i])
+        for batch in range(batch_size):
+            decoded_seq = decode(enc_states[batch], inputs_length[batch])
             results.append(decoded_seq)
 
         return results

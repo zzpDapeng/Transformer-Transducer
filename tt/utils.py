@@ -232,62 +232,44 @@ def padding_mask(inputs):
         one = torch.ones_like(inputs[:, :, 0])
         mask_padding = torch.sum(inputs, dim=-1)
         mask_padding = torch.where(mask_padding == 0., one, zero).bool()
-    return mask_padding
+    return mask_padding.transpose(0, 1)
 
 
-def create_mask(audio, label, left_context, right_context):
-    audio_padding_mask = padding_mask(audio)
-    audio_context_mask = context_mask(audio, left_context, right_context)
-    audio_mask = torch.max(audio_context_mask[None, :, :], audio_padding_mask[:, :, None])
-    label_padding_mask = padding_mask(label)
-    label_look_ahead_mask = look_ahead_mask(label)
-    label_mask = torch.max(label_look_ahead_mask[None, :, :], label_padding_mask[:, :, None])
-    return audio_mask, label_mask
+def create_mask(audio, label, left_context=None, right_context=None):
+    if left_context is None and right_context is None:
+        # 非流式mask
+        audio_padding_mask = padding_mask(audio)
+        label_padding_mask = padding_mask(label)
+        label_look_ahead_mask = look_ahead_mask(label)
+        label_mask = torch.max(label_look_ahead_mask[:, :, None], label_padding_mask[:, None, :])
+        return audio_padding_mask, label_mask
+    else:
+        audio_padding_mask = padding_mask(audio)
+        audio_context_mask = context_mask(audio, left_context, right_context)
+        audio_mask = torch.max(audio_context_mask[:, :, None], audio_padding_mask[:, None, :])
+        label_padding_mask = padding_mask(label)
+        label_look_ahead_mask = look_ahead_mask(label)
+        label_mask = torch.max(label_look_ahead_mask[:, :, None], label_padding_mask[:, None, :])
+        return audio_mask, label_mask
+
+
+def label_smoothing(inputs, epsilon=0.1):
+    K = inputs.shape.as_list()[-1]  # number of channels
+    return ((1 - epsilon) * inputs) + (epsilon / K)
 
 
 if __name__ == '__main__':
-    a = np.random.randint(0, 100, (1, 10, 8))
-    print(a.shape)
-    print(a)
-    b = concat_frame(a, 3, 0)
-    c = subsampling(b, 30)
-    print(b.shape)
-    print(b)
-    print(c.shape)
-    print(c)
-
     # 测试mask
     a1 = torch.randn([2, 8, 512])
     a21 = torch.randn([1, 2, 512])
     a22 = torch.zeros([1, 2, 512])
     a2 = torch.cat([a21, a22], dim=0)
-    a = torch.cat([a1, a2], dim=1)
-    mask_padding = padding_mask(a)
-    print("audio padding mask")
-    print(mask_padding.shape)
-    print(mask_padding)
+    audio = torch.cat([a1, a2], dim=1)
 
-    c_mask = context_mask(a, 3, 2)
-    print('\naudio context mask')
-    print(c_mask.shape)
-    print(c_mask)
-
-    l = torch.tensor([[5, 6, 7, 3, 4, 1, 2, 4, 3, 8],
-                      [5, 6, 7, 3, 4, 1, 2, 4, 0, 0]])
-    mask_padding = padding_mask(l)
-    print("\nlabel padding mask")
-    print(mask_padding.shape)
-    print(mask_padding)
-
-    mask_look_ahead = look_ahead_mask(l)
-    print("\nlabel look ahead mask")
-    print(mask_look_ahead.shape)
-    print(mask_look_ahead)
-
-    audio_mask, label_mask = create_mask(a, l, 3, 2)
-    print("\naudio mask")
+    l = torch.tensor([[0, 6, 7, 3, 4, 1, 2, 4, 3, 8],
+                      [0, 6, 7, 3, 4, 1, 2, 4, 0, 0]])
+    audio_mask, label_mask = create_mask(audio, l)
     print(audio_mask.shape)
     print(audio_mask)
-    print("\nlabel mask")
     print(label_mask.shape)
     print(label_mask)
