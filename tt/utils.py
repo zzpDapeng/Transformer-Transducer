@@ -1,10 +1,11 @@
-import logging
 import wave
-
-import editdistance
+import torch
+import random
+import logging
 import librosa
 import numpy as np
-import torch
+import editdistance
+import matplotlib.pyplot as plt
 
 
 class AttrDict(dict):
@@ -209,12 +210,18 @@ def write_result(preds, transcripts, epoch):
 
 
 def look_ahead_mask(label):
+    """
+    用于标签的前瞻遮挡
+    """
     seq_len = label.size(1)
     mask_look_ahead = torch.triu(label.new_ones([seq_len, seq_len]), diagonal=1).bool()
     return mask_look_ahead
 
 
 def context_mask(audio, left_context=10, right_context=2):
+    """
+    用于流式语音识别的上下文遮挡
+    """
     seq_len = audio.size(1)
     up = torch.triu(audio.new_ones([seq_len, seq_len]), diagonal=right_context + 1)
     down = torch.tril(audio.new_ones([seq_len, seq_len]), diagonal=-left_context - 1)
@@ -223,6 +230,10 @@ def context_mask(audio, left_context=10, right_context=2):
 
 
 def padding_mask(inputs):
+    """
+    标签和音频都可用的填充遮挡
+    todo:有问题，训练时输出全是0
+    """
     if inputs.dim() == 2:
         zero = torch.zeros_like(inputs)
         one = torch.ones_like(inputs)
@@ -236,6 +247,9 @@ def padding_mask(inputs):
 
 
 def create_mask(audio, label, left_context=None, right_context=None):
+    """
+    padding mask有问题，所以这个也不能用
+    """
     if left_context is None and right_context is None:
         # 非流式mask
         audio_padding_mask = padding_mask(audio)
@@ -258,18 +272,80 @@ def label_smoothing(inputs, epsilon=0.1):
     return ((1 - epsilon) * inputs) + (epsilon / K)
 
 
+def time_mask_augment(inputs, max_mask_time=5, mask_num=10):
+    """
+    时间遮掩，
+    :param inputs: 三维numpy或tensor，(batch, time_step,  feature_dim)
+    :param max_mask_time:
+    :param mask_num:
+    :return:
+    """
+    time_len = inputs.shape[1]
+    for i in range(mask_num):
+        t = np.random.uniform(low=0.0, high=max_mask_time)
+        t = int(t)
+        t0 = random.randint(0, time_len - t)
+        inputs[:, t0:t0 + t, :] = 0
+
+    return inputs
+
+
+def frequency_mask_augment(inputs, max_mask_frequency=5, mask_num=10):
+    """
+
+    :param inputs: 三维numpy或tensor，(batch, time_step,  feature_dim)
+    :param max_mask_frequency:
+    :param mask_num:
+    :return:
+    """
+    feature_len = inputs.shape[2]
+    for i in range(mask_num):
+        f = np.random.uniform(low=0.0, high=max_mask_frequency)
+        f = int(f)
+        f0 = random.randint(0, feature_len - f)
+        inputs[:, :, f0:f0 + f] = 0
+    return inputs
+
+
+def tensor_to_img(spectrogram):
+    plt.figure()  # arbitrary, looks good on my screen.
+    # plt.imshow(spectrogram[0].T)
+    plt.imshow(spectrogram.T)
+    plt.show()
+
+
 if __name__ == '__main__':
     # 测试mask
-    a1 = torch.randn([2, 8, 512])
-    a21 = torch.randn([1, 2, 512])
-    a22 = torch.zeros([1, 2, 512])
-    a2 = torch.cat([a21, a22], dim=0)
-    audio = torch.cat([a1, a2], dim=1)
+    # a1 = torch.randn([2, 8, 512])
+    # a21 = torch.randn([1, 2, 512])
+    # a22 = torch.zeros([1, 2, 512])
+    # a2 = torch.cat([a21, a22], dim=0)
+    # audio = torch.cat([a1, a2], dim=1)
+    #
+    # l = torch.tensor([[0, 6, 7, 3, 4, 1, 2, 4, 3, 8],
+    #                   [0, 6, 7, 3, 4, 1, 2, 4, 0, 0]])
+    # audio_mask, label_mask = create_mask(audio, l)
+    # print(audio_mask.shape)
+    # print(audio_mask)
+    # print(label_mask.shape)
+    # print(label_mask)
 
-    l = torch.tensor([[0, 6, 7, 3, 4, 1, 2, 4, 3, 8],
-                      [0, 6, 7, 3, 4, 1, 2, 4, 0, 0]])
-    audio_mask, label_mask = create_mask(audio, l)
-    print(audio_mask.shape)
-    print(audio_mask)
-    print(label_mask.shape)
-    print(label_mask)
+    # 测试specAugment
+    audio_path = '/media/dapeng/Documents/DataSet/Audio/dev_set/dev/5_1812/5_1812_20170628135834.wav'
+    # audio_path = '../../party-crowd.wav'
+    audio, sampling_rate = read_wave_from_file(audio_path)
+    feature = get_feature(audio, sampling_rate, 128)
+    feature = concat_frame(feature, 3, 0)
+    feature = subsampling(feature, 3)
+    feature = feature[None, :, :]
+    feature = torch.tensor(feature)
+    feature = torch.cat((feature, feature), 0)
+
+    print(feature.shape)
+    tensor_to_img(torch.reshape(feature, (-1, 512)))
+
+    combined = time_mask_augment(
+        frequency_mask_augment(feature, max_mask_frequency=5, mask_num=10),
+        max_mask_time=5,
+        mask_num=10)
+    tensor_to_img(torch.reshape(feature, (-1, 512)))

@@ -57,10 +57,11 @@ class Transducer(nn.Module):
     def forward(self, inputs, targets):
         targets = F.pad(targets, pad=[1, 0, 0, 0], value=0)
         # 流式语音识别
-        # audio_mask = context_mask(inputs)[:, :, None]
+        audio_mask = context_mask(inputs)[:, :, None]
         # 非流式语音识别
+        # audio_mask = None
         label_mask = look_ahead_mask(targets)[:, :, None]
-        enc_state = self.encoder(inputs)
+        enc_state = self.encoder(inputs, audio_mask)
         dec_state = self.decoder(targets, label_mask)
 
         logits = self.joint(enc_state, dec_state)

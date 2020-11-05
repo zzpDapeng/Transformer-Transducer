@@ -16,7 +16,7 @@ from tt.dataset import AudioDataset
 from tt.model import Transducer
 from tt.optim import Optimizer
 from tt.utils import AttrDict, init_logger, count_parameters, save_model, computer_cer, dict_map, write_result
-from tt.utils import generate_dictionary
+from tt.utils import generate_dictionary, time_mask_augment, frequency_mask_augment
 
 
 def train(epoch, config, model, training_data, optimizer, criterion, logger, visualizer=None):
@@ -38,6 +38,11 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
         if config.training.num_gpu > 0:
             inputs, inputs_length = inputs.cuda(), inputs_length.cuda()
             targets, targets_length = targets.cuda(), targets_length.cuda()
+
+        inputs = time_mask_augment(
+            frequency_mask_augment(inputs, max_mask_frequency=5, mask_num=10),
+            max_mask_time=5,
+            mask_num=10)
 
         if config.optim.step_wise_update:
             optimizer.step_decay_lr()
@@ -76,7 +81,7 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
             process = step / batch_steps * 100
             logger.info('-Training-Epoch:%d(%.5f%%), Global Step:%d, Learning Rate:%.6f, Grad Norm:%.5f, Loss:%.5f, '
                         'AverageLoss: %.5f, Run Time:%.3f' % (epoch, process, optimizer.global_step, optimizer.lr,
-                                                              grad_norm, loss.item(), avg_loss, end - start))
+                                                              grad_norm.item(), loss.item(), avg_loss, end - start))
             start = time.process_time()
 
         del loss, inputs, targets, inputs_length, targets_length, logits
@@ -94,6 +99,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
     total_word = 0
     batch_steps = len(validating_data)
     cer = 0.
+    step = 0
 
     for step, (inputs, inputs_length, targets, targets_length) in enumerate(validating_data):
 
