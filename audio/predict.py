@@ -10,8 +10,7 @@ import torch
 from tt.utils import AttrDict, read_wave_from_file, get_feature, concat_frame, subsampling, dict_map
 from tt.model import Transducer
 
-# WAVE_OUTPUT_FILENAME = 'audio/output.wav'
-WAVE_OUTPUT_FILENAME = '/media/dapeng/Downloads/DataSet/Audio/Chinese/data_aishell/wav/test/S0764/BAC009S0764W0121.wav'
+WAVE_OUTPUT_FILENAME = 'audio/output_15s.wav'
 
 
 def init_model():
@@ -38,7 +37,7 @@ def init_model():
     return model, vocab
 
 
-if __name__ == '__main__':
+def pred():
     model, vocab = init_model()
 
     audio, fr = read_wave_from_file(WAVE_OUTPUT_FILENAME)
@@ -51,7 +50,6 @@ if __name__ == '__main__':
     len = feature.shape[1]
     len = torch.tensor([len])
     len = len.cuda()
-    preds = model.recognize2(feature, len)
+    preds = model.recognize(feature, len)
     preds = dict_map(preds, vocab)
     print(''.join(preds[0]))
-

@@ -16,23 +16,24 @@ import tkinter.font as font
 import matplotlib.pyplot as plt
 from tt.utils import AttrDict
 from tt.model import Transducer
-from tt.utils import concat_frame, subsampling, generate_dictionary, get_feature
+from tt.utils import concat_frame, subsampling, generate_dictionary, get_feature, context_mask
 
 
 class StreamRec:
     def __init__(self,
-                 record_seconds=5,
-                 chunk=16000,  # or 1024
+                 config=None,
+                 pred_frame=18,
+                 record_seconds=15,
+                 chunk=1024,  # or 1024 = 32 * 32
                  sample_width=2,
                  channels=1,
-                 rate=16000,
-                 left_mask=10,  # 根据模型设置
-                 right_mask=2,
-                 layer_num=8):
+                 rate=16000,  # 固定，不要改
+                 layer_num=18):
         # 模型
+        self.config = config
         self.__init_model()
         print("加载字典...")
-        self.dictionary, _ = generate_dictionary('data/aishell/grapheme_table.txt')
+        self.dictionary, _ = generate_dictionary(self.config.data.vocab)
         print("字典加载完毕")
 
         # 音频参数
@@ -44,9 +45,9 @@ class StreamRec:
         self.max_frame_num = self.__reset_max_frame_num()
 
         # 模型参数
-        self.left_mask = left_mask
-        self.right_mask = right_mask
-        self.layer_num = layer_num
+        self.left_context = self.config.model.enc.left_context
+        self.right_context = self.config.model.enc.right_context
+        self.enc_layer_num = self.config.model.enc.n_layer
 
         # 录音机
         self.pa = pyaudio.PyAudio()
@@ -55,26 +56,33 @@ class StreamRec:
         self.audio_data = np.empty((0,), dtype=np.short)  # 使用numpy存储录制的音频数据
         self.frame_num = 0  # 记录当前录制的音频帧总数
 
-        self.win_len = math.ceil(self.rate / self.chunk) * self.chunk  # 滑动窗口长度（单位：帧数），窗口长度设为帧速率，则窗口长度为1秒
-        self.step_len = self.win_len - self.layer_num * (self.right_mask + self.left_mask)  # 推算出的步长
-        self.win_position = 0  # 滑动窗口当前的的起始位置（单位：帧）
+        # 音频滑动窗口（单位:采样点），计算得出，过程见iPad
+        self.win_audio = 15999
+        self.audio_step = 15519
+        self.win_audio_position = 0  # 滑动窗口当前的的起始位置（单位：帧）
 
-        # todo:记录特征和结果
+        # 特征滑动窗口（单位：帧数），窗口长度设为帧速率，则窗口长度为1秒。v1
+        self.pred_frame = pred_frame  # 预测的帧数，(堆叠下采样之后的帧），等于窗口移动的步幅
+        self.win_feature = self.config.model.enc.n_layer * self.left_context \
+                           + pred_frame \
+                           + self.config.model.dec.n_layer * self.right_context  # 等腰梯形窗口长度，单位：帧
+        self.min_pred_frame = self.pred_frame + self.right_context * self.enc_layer_num  # 最低识别帧数
+        self.win_feature_position = 0
+
+        # 记录特征和结果
         self.result = []
-        self.feature = np.empty((0, 128))  # 数据类型？
-        self.effective_feature = np.empty((0, 128))
+        self.feature_log_mel = np.empty((0, 128), dtype=np.float32)
+        self.feature_concat = np.empty((0, 512), dtype=np.float32)
+        self.feature_subsample = np.empty((0, 512), dtype=np.float32)
 
         # 可视化
         self.window = tk.Tk()
         self.__init_view()
 
     def __init_model(self):
-        config_file = open("config/joint.yaml")
-        config = AttrDict(yaml.load(config_file, Loader=yaml.FullLoader))
+        model = Transducer(self.config.model)
 
-        model = Transducer(config.model)
-
-        checkpoint = torch.load(config.training.load_model)
+        checkpoint = torch.load(self.config.training.load_model)
         model.encoder.load_state_dict(checkpoint['encoder'])
         model.decoder.load_state_dict(checkpoint['decoder'])
         model.joint.load_state_dict(checkpoint['joint'])
@@ -115,23 +123,58 @@ class StreamRec:
         dec_state = self.model.decoder(zero_token)
         # todo:流式识别具体过程
         # todo：方案1 以数据帧为窗口，不考虑窗口前后的上下文特征信息，不考虑mask
-        while True:
-            if self.win_position + self.win_len <= self.frame_num:  # 有足够的语音使得窗口能够移动
-                win_audio = self.audio_data[self.win_position:self.win_position + self.win_len]
-                # print(win_audio.max())
-                # print(win_audio.min())
+        while True:  # 第一层窗口
+            if self.win_audio_position + self.win_audio <= self.frame_num \
+                    or self.win_audio_position + self.win_audio > self.max_frame_num:  # 有足够的语音使得窗口能够移动 or 音频录制结束，剩余音频不足以移动窗口
+
+                # 特征提取平滑
+                if self.win_audio_position + self.win_audio > self.max_frame_num:
+                    win_audio = self.audio_data[self.win_audio_position:self.frame_num]
+                else:
+                    win_audio = self.audio_data[self.win_audio_position:self.win_audio_position + self.win_audio]
                 win_audio_feature = get_feature(win_audio, self.rate, 128)
-                # plt.imshow(win_audio_feature.T, cmap='Reds')
-                # plt.show()
-                # 数据堆叠和下采样处理
+                win_audio_feature = win_audio_feature[:-3, :]  # 舍弃最后3帧，得到97帧，因为这3帧音频数据不完整。通过（窗口移动<窗口）弥补这3帧（音频平滑过渡）
+                win_audio_feature_len = win_audio_feature.shape[0]
+                self.feature_log_mel = np.concatenate((self.feature_log_mel, win_audio_feature), axis=0)
+                # print('1', self.feature_log_mel.shape)
+                # print('2', win_audio_feature.shape)
+
+                # 堆叠平滑
+                win_audio_feature = self.feature_log_mel[-3 - win_audio_feature_len:, :]  # 往前多拿3帧，保证有前面的历史信息（堆叠平滑过渡）
+                # print('3', win_audio_feature.shape)
                 win_audio_feature = concat_frame(win_audio_feature, 3, 0)
-                win_audio_feature = subsampling(win_audio_feature, 3)
+                win_audio_feature = win_audio_feature[3:, :]  # 去掉往前多拿3帧，以这三帧为中心的帧并不需要（堆叠平滑过渡）
+                len_feature_concat_before = self.feature_concat.shape[0]
+                self.feature_concat = np.concatenate((self.feature_concat,
+                                                      win_audio_feature), axis=0)  # 把当前时间窗口的所有堆叠帧加入到self.feature_concat
+                # 下采样平滑
+                if len_feature_concat_before % 3 == 0:
+                    win_audio_feature = subsampling(self.feature_concat[len_feature_concat_before:, :], 3)
+                elif len_feature_concat_before % 3 == 1:
+                    win_audio_feature = subsampling(self.feature_concat[len_feature_concat_before + 2:, :], 3)
+                else:
+                    win_audio_feature = subsampling(self.feature_concat[len_feature_concat_before + 1:, :], 3)
+                self.feature_subsample = np.concatenate((self.feature_subsample, win_audio_feature), axis=0)
+
+                # todo:特征滑动窗口
+                len_feature_subsample = self.feature_subsample.shape[0]
+                while True:
+                    if len_feature_subsample - self.win_feature_position >= self.min_pred_frame:  # 满足最低识别帧数
+                        pass
+                    else:
+                        break
+
                 # 扩展批次维度
                 win_audio_feature = np.expand_dims(win_audio_feature, axis=0)  # 可以不扩展维度吗
+                # print('type:', win_audio_feature.dtype)  # float32
                 # GPU
                 win_audio_feature = torch.from_numpy(win_audio_feature).cuda()
+                # print('win_audio_feature:', win_audio_feature.shape)  # torch.Size([1, 34, 512])
 
-                win_enc_states = self.model.encoder(win_audio_feature)
+                audio_mask = context_mask(win_audio_feature, left_context=self.left_context,
+                                          right_context=self.right_context)[:, :, None].cuda()
+
+                win_enc_states = self.model.encoder(win_audio_feature, audio_mask)
 
                 enc_states_len = win_enc_states.shape[1]
                 for t in range(enc_states_len):
@@ -148,9 +191,11 @@ class StreamRec:
                         token = token.cuda()
                         dec_state = self.model.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
                 # 窗口移动
-                self.win_position += self.win_len
+                self.win_audio_position += self.audio_step
+            elif self.win_audio_position + self.win_audio > self.max_frame_num:  # 录制完成，剩余音频不足以滑动音频窗口
+                pass
 
-            if self.win_position == self.max_frame_num:
+            if self.win_audio_position >= self.max_frame_num:
                 print("over")
                 break
 
@@ -176,10 +221,15 @@ class StreamRec:
         """
         self.audio_data = np.empty((0,), dtype=np.short)
         self.frame_num = 0
-        self.win_position = 0
+        self.win_audio_position = 0
+        self.win_feature_position = 0
         self.result = []
+        self.feature_log_mel = np.empty((0, 128), dtype=np.float32)
+        self.feature_concat = np.empty((0, 512), dtype=np.float32)
+        self.feature_subsample = np.empty((0, 512), dtype=np.float32)
 
-    # button功能
+        # button功能
+
     def __button_action(self):
 
         self.text.delete(0.0, tk.END)
@@ -206,7 +256,7 @@ class StreamRec:
         self.font = font.Font(family='song ti', size=14)
 
         self.button_var.set('Start Rec')
-        self.seconds_var.set(5)
+        self.seconds_var.set(self.record_seconds)
         self.text_var.set('识别内容')
 
         # 设置界面部件
@@ -249,22 +299,8 @@ class StreamRec:
         self.window.mainloop()
 
 
-if __name__ == '__main__':
-    # 模型初始化
-    # config_file = open("config/joint.yaml")
-    # config = AttrDict(yaml.load(config_file, Loader=yaml.FullLoader))
-    #
-    # model = Transducer(config.model)
-    #
-    # checkpoint = torch.load(config.training.load_model)
-    # model.encoder.load_state_dict(checkpoint['encoder'])
-    # model.decoder.load_state_dict(checkpoint['decoder'])
-    # model.joint.load_state_dict(checkpoint['joint'])
-    #
-    # model = model.cuda()
-    # model.eval()
-    # print("已加载模型")
-
-    stream_rec = StreamRec()
-    # stream_rec = stream_rec()
-    # stream_rec.start_rec()
+def streaming_asr():
+    config_file = open("config/joint_streaming.yaml")
+    configure = AttrDict(yaml.load(config_file, Loader=yaml.FullLoader))
+    stream_rec = StreamRec(config=configure)
+    stream_rec.start_rec()

@@ -29,7 +29,6 @@ def train(epoch, config, model, training_data, optimizer, criterion, logger, vis
     start = time.process_time()
 
     for step, (inputs, inputs_length, targets, targets_length) in enumerate(training_data):
-
         max_inputs_length = inputs_length.max()
         max_targets_length = targets_length.max()
         inputs = inputs[:, :max_inputs_length, :]

@@ -331,21 +331,27 @@ if __name__ == '__main__':
     # print(label_mask)
 
     # 测试specAugment
-    audio_path = '/media/dapeng/Documents/DataSet/Audio/dev_set/dev/5_1812/5_1812_20170628135834.wav'
-    # audio_path = '../../party-crowd.wav'
-    audio, sampling_rate = read_wave_from_file(audio_path)
-    feature = get_feature(audio, sampling_rate, 128)
-    feature = concat_frame(feature, 3, 0)
-    feature = subsampling(feature, 3)
-    feature = feature[None, :, :]
-    feature = torch.tensor(feature)
-    feature = torch.cat((feature, feature), 0)
-
+    # audio_path = '/media/dapeng/Documents/DataSet/Audio/dev_set/dev/5_1812/5_1812_20170628135834.wav'
+    # # audio_path = '../../party-crowd.wav'
+    # audio, sampling_rate = read_wave_from_file(audio_path)
+    # feature = get_feature(audio, sampling_rate, 128)
+    # feature = concat_frame(feature, 3, 0)
+    # feature = subsampling(feature, 3)
+    # feature = feature[None, :, :]
+    # feature = torch.tensor(feature)
+    # feature = torch.cat((feature, feature), 0)
+    #
+    # print(feature.shape)
+    # tensor_to_img(torch.reshape(feature, (-1, 512)))
+    #
+    # combined = time_mask_augment(
+    #     frequency_mask_augment(feature, max_mask_frequency=5, mask_num=10),
+    #     max_mask_time=5,
+    #     mask_num=10)
+    # tensor_to_img(torch.reshape(feature, (-1, 512)))
+    a = np.random.randint(low=0, high=16, size=(15519,), dtype=np.int)
+    print(a.shape)
+    feature = get_feature(a, 16000, 128)
     print(feature.shape)
-    tensor_to_img(torch.reshape(feature, (-1, 512)))
-
-    combined = time_mask_augment(
-        frequency_mask_augment(feature, max_mask_frequency=5, mask_num=10),
-        max_mask_time=5,
-        mask_num=10)
-    tensor_to_img(torch.reshape(feature, (-1, 512)))
+    feature = subsampling(feature)
+    print(feature.shape)

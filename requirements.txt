@@ -1,3 +1,4 @@
+pytorch~=1.5.1
 pyyaml~=5.3.1
 pyaudio~=0.2.11
 numpy~=1.18.5
@@ -9,5 +10,10 @@ tensorboardX~=2.1
 torchaudio~=0.5.1
 tqdm~=4.48.0
 speechpy~=2.4
-specaugment~=1.2.5
+specaugment~=1.2.3
 zhon~=1.1.5
+pandas~=1.1.0
+future~=0.18.2
+torch~=1.5.1
+yaml~=0.2.5
+scipy~=1.2.1

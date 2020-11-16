@@ -4,27 +4,27 @@ feature_type: logmel
 data:
     name: joint
     vocab: data/joint/grapheme_table.txt
-    feature_dim: 64
     left_context_width: 3
     right_context_width: 0
+    feature_dim: 128
     subsample: 3
     apply_cmvn: False
     max_input_length: 410  # 最大490
     max_target_length: 42  # 最大44
-    batch_size: 5
+    batch_size: 6
     short_first: False
     shuffle: True
-    train: data/joint/train
-    dev: data/joint/dev
-    test: data/joint/test
+    train: data/joint/train.csv
+    dev: data/joint/dev.csv
+    test: data/joint/test.csv
 model:
     type: transducer
     enc:
         type: attention
         max_input_length: 410
-        hidden_size:
-        output_size:
-        d_inner: 512
+        left_context: 10
+        right_context: 2
+        d_inner: 2048
         n_head: 8
         d_model: 512
         d_head: 64
@@ -34,34 +34,35 @@ model:
         max_target_length: 42
         hidden_size:
         output_size:
-        d_inner: 512
+        d_inner: 2048
         n_head: 8
         d_model: 512
         d_head: 64
-        n_layer: 1
+        n_layer: 2
     joint:
         input_size: 1024
-        inner_size: 512
+        inner_size: 2048
     vocab_size: 6485
     share_weight: False
     feature_dim:
     dropout: 0.1
 training:
-    load_model: assets/epoch21.chkpt
+    exp_name: non-streaming_asr
+    load_model: assets/non-streaming_8_2_2048_batch5_c1.epoch5.chkpt
     load_encoder: False
     load_decoder: False
     eval_or_not: True
     seed: 1
     num_gpu: 1
-    epochs: 30
+    epochs: 20
     max_grad_norm: 200
     visualization: True
     show_interval: 10
-    save_model: 8enc_1dec_512inner_512feature_5batch
+    save_model: non-streaming_10_2_2048_batch6
 optim:
     type: sgd
-    lr: 0.00025
+    lr: 0.0002
     momentum: 0.9
-    decay_ratio: 0.6
+    decay_ratio: 0.5
     weight_decay: 0
     begin_to_adjust_lr: 10

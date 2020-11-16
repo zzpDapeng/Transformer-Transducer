@@ -56,10 +56,8 @@ class Transducer(nn.Module):
 
     def forward(self, inputs, targets):
         targets = F.pad(targets, pad=[1, 0, 0, 0], value=0)
-        # 流式语音识别
-        audio_mask = context_mask(inputs)[:, :, None]
-        # 非流式语音识别
-        # audio_mask = None
+        # audio_mask = context_mask(inputs)[:, :, None]        # 流式语音识别
+        audio_mask = None        # 非流式语音识别
         label_mask = look_ahead_mask(targets)[:, :, None]
         enc_state = self.encoder(inputs, audio_mask)
         dec_state = self.decoder(targets, label_mask)
@@ -68,15 +66,16 @@ class Transducer(nn.Module):
 
         return logits
 
-    def recognize(self, inputs, inputs_length):
+    def recognize(self, inputs, inputs_length, audio_mask=None):
         """
         batch分开，识别关注之前所有的输出
         :param inputs:
         :param inputs_length:
+        :param audio_mask:
         :return:
         """
         batch_size = inputs.size(0)
-        enc_states = self.encoder(inputs)
+        enc_states = self.encoder(inputs, audio_mask)
 
         zero_token = torch.tensor([[0]], dtype=torch.long)
         if inputs.is_cuda:
