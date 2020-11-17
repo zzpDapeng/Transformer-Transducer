@@ -349,9 +349,12 @@ if __name__ == '__main__':
     #     max_mask_time=5,
     #     mask_num=10)
     # tensor_to_img(torch.reshape(feature, (-1, 512)))
-    a = np.random.randint(low=0, high=16, size=(15519,), dtype=np.int)
-    print(a.shape)
-    feature = get_feature(a, 16000, 128)
-    print(feature.shape)
-    feature = subsampling(feature)
-    print(feature.shape)
+
+    # 测试特征提取平滑
+    # a = np.random.randint(low=0, high=16, size=(15519,), dtype=np.int)
+    # print(a.shape)
+    # feature = get_feature(a, 16000, 128)
+    # print(feature.shape)
+    # feature = subsampling(feature)
+    # print(feature.shape)
+    pass

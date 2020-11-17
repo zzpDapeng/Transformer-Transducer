@@ -1,13 +1,11 @@
 """
 @File:stream_rec.py
-@Descriptions: 调用TT模型进行流式语音识别
+@Descriptions: 以有效音频段为中心，在左右增加上下文特征
 @Author:Dapeng
 @Contact:zzp_dapeng@163.com
 @Time:2020/7/7 下午3:10
 """
-import time
 import wave
-import math
 import yaml
 import torch
 import pyaudio
@@ -15,7 +13,6 @@ import datetime
 import numpy as np
 import tkinter as tk
 import tkinter.font as font
-import matplotlib.pyplot as plt
 from tt.utils import AttrDict
 from tt.model import Transducer
 from tt.utils import concat_frame, subsampling, generate_dictionary, get_feature, context_mask
@@ -25,7 +22,6 @@ class StreamRec:
     def __init__(self,
                  config=None,
                  pred_frame=18,
-                 record_seconds=15,
                  chunk=1024,  # or 1024 = 32 * 32
                  sample_width=2,
                  channels=1,
@@ -42,8 +38,7 @@ class StreamRec:
         self.sample_width = sample_width
         self.channels = channels
         self.rate = rate
-        self.record_seconds = record_seconds
-        self.max_frame_num = self.__reset_max_frame_num()
+        self.recording = False  # 开始，结束按钮控制录制状态
 
         # 模型参数
         self.left_context = self.config.model.enc.left_context
@@ -56,20 +51,17 @@ class StreamRec:
         # 录音数据
         self.audio_data = np.empty((0,), dtype=np.short)  # 使用numpy存储录制的音频数据
         self.frame_num = 0  # 记录当前录制的音频帧总数
+        self.max_frame_num = 0  # 音频录制完成时的语音帧总数
 
         # 音频滑动窗口（单位:采样点），计算得出，过程见iPad
         self.win_audio = 15999
         self.audio_step = 15519
         self.win_audio_position = 0  # 滑动窗口当前的的起始位置（单位：帧）
 
-        # 特征滑动窗口（单位：帧数），窗口长度设为帧速率，则窗口长度为1秒。v1
-        self.pred_frame = pred_frame  # 预测的帧数，(堆叠下采样之后的帧），等于窗口移动的步幅
-        self.max_win = self.config.model.enc.n_layer * self.left_context \
-                       + pred_frame \
-                       + self.config.model.enc.n_layer * self.right_context  # 等腰梯形窗口长度，单位：帧
-        self.min_win = self.pred_frame + self.right_context * self.enc_layer_num  # 最低识别帧数
-        self.win_len = self.min_win
-        self.win_feature_position = 0
+        # 特征信息（单位：帧数)
+        self.left_context_len = self.enc_layer_num * self.left_context
+        self.right_context_len = self.enc_layer_num * self.right_context
+        self.win_feature_position = 0  # 记录有效音频窗口的位置
 
         # 记录特征和结果
         self.result = []
@@ -94,16 +86,13 @@ class StreamRec:
         print("已加载模型")
         self.model = model
 
-    def __reset_max_frame_num(self):
-        max_frame_num = self.chunk * math.ceil(self.rate * self.record_seconds / self.chunk)
-        return max_frame_num
-
     def __callback(self, in_data, frame_count, time_info, status):
         chunk_data = np.frombuffer(in_data, dtype=np.short)
         self.audio_data = np.concatenate((self.audio_data, chunk_data), axis=0)
         self.frame_num += frame_count
         # 到达录制时间，停止
-        if self.frame_num >= self.rate * self.record_seconds:
+        if not self.recording:
+            print('pyaudio 录制结束')
             return in_data, pyaudio.paComplete
 
         return in_data, pyaudio.paContinue
@@ -123,14 +112,19 @@ class StreamRec:
         zero_token = torch.tensor([[0]], dtype=torch.long)
         zero_token = zero_token.cuda()
         dec_state = self.model.decoder(zero_token)
+        last_clip = False
         # todo:流式识别具体过程
         while True:  # 第一层窗口
+            # print('win_audio_position, ', self.win_audio_position)
+            # print('max_frame_num, ', self.max_frame_num)
+            # 有足够的语音使得窗口能够移动 or 音频录制结束，剩余音频不足以移动窗口
             if self.win_audio_position + self.win_audio <= self.frame_num \
-                    or self.win_audio_position + self.win_audio > self.max_frame_num:  # 有足够的语音使得窗口能够移动 or 音频录制结束，剩余音频不足以移动窗口
+                    or self.win_audio_position + self.win_audio >= self.max_frame_num != 0:
 
                 # 特征提取平滑
-                if self.win_audio_position + self.win_audio > self.max_frame_num:
+                if self.win_audio_position + self.win_audio >= self.max_frame_num != 0:
                     print('最后录音片段:', self.win_audio_position, " : ", self.frame_num)
+                    last_clip = True
                     win_audio = self.audio_data[self.win_audio_position:self.frame_num]
                 else:
                     win_audio = self.audio_data[self.win_audio_position:self.win_audio_position + self.win_audio]
@@ -160,74 +154,71 @@ class StreamRec:
 
                 # 特征滑动窗口
                 len_feature_subsample = self.feature_subsample.shape[0]
-                while True:
-                    if self.win_feature_position + self.win_len <= len_feature_subsample:  # 满足最低识别帧数
-                        start = self.win_feature_position
-                        end = self.win_feature_position + self.win_len
-                        win_audio_feature = self.feature_subsample[start:end, :]
-                        # 扩展批次维度
-                        win_audio_feature = np.expand_dims(win_audio_feature, axis=0)
-                        win_audio_feature = torch.from_numpy(win_audio_feature).cuda()
-                        # 流式mask
-                        audio_mask = context_mask(win_audio_feature, left_context=self.left_context,
-                                                  right_context=self.right_context)[:, :, None].cuda()
-                        win_enc_states = self.model.encoder(win_audio_feature, audio_mask)
-                        effect_start = -self.min_win
-                        effect_end = -self.min_win + self.pred_frame
-                        effect_win_enc_states = win_enc_states[:, effect_start:effect_end, :]
+                # print('4', len_feature_subsample)
+                # 有足够的未来信息可以处理/最后一部分
+                if len_feature_subsample - self.win_feature_position > self.right_context_len or last_clip:
+                    # print('len_feature_subsample', len_feature_subsample)
+                    # print('win_feature_position', self.win_feature_position)
+                    left_frame = self.left_context_len  # 正常左窗口
+                    right_frame = self.right_context_len  # 正常右窗口
+                    start = self.win_feature_position - left_frame  # 增加历史帧,确定开始位置
+                    if start < 0:
+                        # print('历史帧不足')
+                        left_frame = self.win_feature_position
+                        start = 0
+                    end = len_feature_subsample  # 当前的最大帧数
+                    if last_clip:  # 录制结束，最后一段
+                        right_frame = 0
+                    win_audio_feature = self.feature_subsample[start:end, :]
+                    # 扩展批次维度
+                    win_audio_feature = np.expand_dims(win_audio_feature, axis=0)
+                    win_audio_feature = torch.from_numpy(win_audio_feature).cuda()
+                    # 流式mask
+                    audio_mask = context_mask(win_audio_feature, left_context=self.left_context,
+                                              right_context=self.right_context)[:, :, None].cuda()
+                    win_enc_states = self.model.encoder(win_audio_feature, audio_mask)
 
-                        enc_states_len = effect_win_enc_states.shape[1]
-                        for t in range(enc_states_len):
-                            logits = self.model.joint(effect_win_enc_states[:, t, :].view(-1), dec_state.view(-1))
-                            out = torch.nn.functional.softmax(logits, dim=0).detach()
-                            pred = torch.argmax(out, dim=0)
-                            pred = int(pred.item())
-                            if pred != 0:
-                                self.result.append(pred)
-                                word = self.dictionary[pred]
-                                self.text.insert('end', word)
-                                self.text.update()
-                                result_len = len(self.result)
-                                if result_len > 40:
-                                    effect_token = self.result[-40:]
-                                else:
-                                    effect_token = self.result
-                                token = torch.tensor([effect_token], dtype=torch.long)
-                                token = token.cuda()
-                                dec_state = self.model.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
-                        # 特征窗口移动
-                        if self.win_len < self.max_win:
-                            self.win_len += self.pred_frame
-                        else:
-                            self.win_feature_position += self.pred_frame
-                    else:
-                        break
+                    effect_start = left_frame
+                    effect_end = -right_frame
+                    effect_win_enc_states = win_enc_states[:, effect_start:effect_end, :]
+                    effect_len = effect_win_enc_states.shape[1]
+
+                    enc_states_len = effect_win_enc_states.shape[1]
+                    for t in range(enc_states_len):
+                        logits = self.model.joint(effect_win_enc_states[:, t, :].view(-1), dec_state.view(-1))
+                        out = torch.nn.functional.softmax(logits, dim=0).detach()
+                        pred = torch.argmax(out, dim=0)
+                        pred = int(pred.item())
+                        if pred != 0:
+                            self.result.append(pred)
+                            word = self.dictionary[pred]
+                            self.text.insert('end', word)
+                            self.text.update()
+                            result_len = len(self.result)
+                            if result_len > 40:
+                                effect_token = self.result[-40:]
+                            else:
+                                effect_token = self.result
+                            token = torch.tensor([effect_token], dtype=torch.long)
+                            token = token.cuda()
+                            dec_state = self.model.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
+                    # print('effect_start:', effect_start)
+                    # print('effect_end:', effect_end)
+                    # print('effect_len:', effect_len)
+                    self.win_feature_position += effect_len
                 # 移动音频窗口
                 self.win_audio_position += self.audio_step
-            elif self.win_audio_position + self.win_audio > self.max_frame_num:  # 录制完成，剩余音频不足以滑动音频窗口
-                pass
 
-            if self.win_audio_position >= self.max_frame_num:
-                print("over")
+            if not self.recording:
+                self.max_frame_num = self.frame_num
+
+            if last_clip:
                 break
 
-        # 循环监听音频流是否录制完成 用上面的替换
-        # while self.stream.is_active():
-        #     time.sleep(1)
-        #     self.text.insert('end', '你')
-        #     self.text.update()
-
-        self.stream.stop_stream()
-        self.stream.close()
-        print("结束录音，识别结束")
-        print('识别结果：', ''.join([self.dictionary[x] for x in self.result]))
-        file_name = self.save_audio()
-        print('保存音频到：', file_name)
-        self.start_button.config(state=tk.ACTIVE)
-        self.start_button.update()
+        print('识别结束：', ''.join([self.dictionary[x] for x in self.result]))
         # 参数恢复
         self.reset_parameter()
-        print("Reset parameters")
+        print("重置参数")
 
     def reset_parameter(self):
         """
@@ -255,33 +246,42 @@ class StreamRec:
         return file_name
 
     # button功能
-    def __button_action(self):
-
+    def __start_button_action(self):
+        # 清除识别结果
         self.text.delete(0.0, tk.END)
-        # 判断输入时间是否有效
-        # try:
-        rec_secs = self.seconds_var.get()
-        self.record_seconds = rec_secs
-        self.max_frame_num = self.__reset_max_frame_num()
+        # 更新参数
+        self.recording = True
+        # 设置按钮选中状态
+        self.stop_button.config(state=tk.ACTIVE)
         self.start_button.config(state=tk.DISABLED)
         self.start_button.update()
+        self.stop_button.update()
+        # 开始识别
         self.start_rec()
 
-    # except:
-    #     self.text.insert('end', 'Error Record!')
-    #     self.text.update()
+    def __stop_button_action(self):
+        self.recording = False
+        self.stop_button.config(state=tk.DISABLED)
+        self.start_button.config(state=tk.ACTIVE)
+        self.start_button.update()
+        self.stop_button.update()
+        print('录音结束')
+        self.stream.stop_stream()
+        self.stream.close()
+        file_name = self.save_audio()
+        print('保存音频到：', file_name)
 
     def __init_view(self):
         self.window.title('TT流式语音识别系统')
         self.window.geometry('600x570')
-        self.seconds_var = tk.IntVar()
-        self.button_var = tk.StringVar()
+        self.start_button_var = tk.StringVar()
+        self.stop_button_var = tk.StringVar()
         self.text_var = tk.StringVar()
 
         self.font = font.Font(family='song ti', size=14)
 
-        self.button_var.set('Start Rec')
-        self.seconds_var.set(self.record_seconds)
+        self.start_button_var.set('Start Rec')
+        self.stop_button_var.set('Stop Rec')
         self.text_var.set('识别内容')
 
         # 设置界面部件
@@ -293,33 +293,24 @@ class StreamRec:
         self.text.place(x=20, y=20, anchor='nw')
         self.text.insert('end', self.text_var.get())
 
-        # 录制时间标签
-        self.time_label = tk.Label(self.window,
-                                   text='Record time:',
-                                   font=('Arial', 12))
-        self.time_label.place(x=20, y=520, anchor='nw')
-
-        # 录制时间输入框
-        self.time_entry = tk.Entry(self.window,
-                                   textvariable=self.seconds_var,
-                                   font=('Arial', 12),
-                                   bg='white')
-        self.time_entry.place(x=150, y=520, anchor='nw')
-
-        # 录制时间单位标签
-        self.second_label = tk.Label(self.window,
-                                     text='s',
-                                     font=('Arial', 12))
-        self.second_label.place(x=360, y=520, anchor='nw')
-
         # 录制按钮
         self.start_button = tk.Button(self.window,
-                                      textvariable=self.button_var,
+                                      textvariable=self.start_button_var,
                                       font=('Arial', 12),
                                       bg='white',
                                       width=9,
-                                      command=self.__button_action)
-        self.start_button.place(x=450, y=515, anchor='nw')
+                                      command=self.__start_button_action)
+        self.start_button.place(x=100, y=515, anchor='nw')
+
+        # 结束录制按钮
+        self.stop_button = tk.Button(self.window,
+                                     textvariable=self.stop_button_var,
+                                     font=('Arial', 12),
+                                     bg='white',
+                                     width=9,
+                                     command=self.__stop_button_action)
+        self.stop_button.place(x=400, y=515, anchor='nw')
+        self.stop_button.config(state=tk.DISABLED)
 
         self.window.mainloop()
 
