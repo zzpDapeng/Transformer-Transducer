@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pandas
-
+from augment.audio_augment import audio_augment
 import tt.kaldi_io as kaldi_io
 from tt.utils import get_feature, read_wave_from_file, concat_frame, subsampling
 
@@ -85,6 +85,9 @@ class AudioDataset(Dataset):
 
         targets = np.array(self.encode(label))
         wave_data, frame_rate = read_wave_from_file(audio_path)
+        # 数据增强
+        wave_data = audio_augment(wave_data)
+        # 特征提取
         features = get_feature(wave_data, frame_rate, self.feature_dim)
         # features = np.load(feats_scp)
         features = concat_frame(features, self.left_context_width, self.right_context_width)

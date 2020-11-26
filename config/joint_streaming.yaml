@@ -1,0 +1,68 @@
+units_type: character
+feature_source: librosa
+feature_type: logmel
+data:
+    name: joint
+    vocab: data/joint/grapheme_table.txt
+    left_context_width: 3
+    right_context_width: 0
+    feature_dim: 128
+    subsample: 3
+    apply_cmvn: False
+    max_input_length: 410  # 最大490
+    max_target_length: 42  # 最大44
+    batch_size: 4
+    short_first: False
+    shuffle: True
+    train: data/myjoint/train.csv
+    dev: data/myjoint/dev.csv
+    test: data/myjoint/test.csv
+model:
+    type: transducer
+    enc:
+        type: attention
+        max_input_length: 410
+        left_context: 10
+        right_context: 2
+        d_inner: 2048
+        n_head: 8
+        d_model: 512
+        d_head: 64
+        n_layer: 18
+    dec:
+        type: attention
+        max_target_length: 42
+        hidden_size:
+        output_size:
+        d_inner: 2048
+        n_head: 8
+        d_model: 512
+        d_head: 64
+        n_layer: 2
+    joint:
+        input_size: 1024
+        inner_size: 2048
+    vocab_size: 6485
+    share_weight: False
+    feature_dim:
+    dropout: 0.1
+training:
+    exp_name: non-streaming_asr
+    load_model: assets/streaming_18_2_2048_batch4_epoch6_train.epoch14.chkpt
+    load_encoder: False
+    load_decoder: False
+    eval_or_not: True
+    seed: 1
+    num_gpu: 1
+    epochs: 20
+    max_grad_norm: 200
+    visualization: True
+    show_interval: 10
+    save_model: streaming_18_2_2048_batch4
+optim:
+    type: sgd
+    lr: 0.0002
+    momentum: 0.9
+    decay_ratio: 0.5
+    weight_decay: 0
+    begin_to_adjust_lr: 10

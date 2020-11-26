@@ -191,6 +191,13 @@ def get_feature(wave_data, framerate, feature_dim=128):
     return specgram
 
 
+def get_final_feature(samples, sample_rate=16000, feature_dim=128, left=3, right=0, subsample=3):
+    feature = get_feature(samples, sample_rate, feature_dim)
+    feature = concat_frame(feature, left, right)
+    feature = subsampling(feature, subsample)
+    return feature
+
+
 def dict_map(preds, vocab):
     res = []
     for batch in range(len(preds)):
@@ -314,6 +321,15 @@ def tensor_to_img(spectrogram):
     plt.show()
 
 
+def save_wav(file_name, audio_data, channels=1, sample_width=2, rate=16000):
+    wf = wave.open(file_name, 'wb')
+    wf.setnchannels(channels)
+    wf.setsampwidth(sample_width)
+    wf.setframerate(rate)
+    wf.writeframes(b''.join(audio_data))
+    wf.close()
+
+
 if __name__ == '__main__':
     # 测试mask
     # a1 = torch.randn([2, 8, 512])
@@ -331,24 +347,25 @@ if __name__ == '__main__':
     # print(label_mask)
 
     # 测试specAugment
-    # audio_path = '/media/dapeng/Documents/DataSet/Audio/dev_set/dev/5_1812/5_1812_20170628135834.wav'
-    # # audio_path = '../../party-crowd.wav'
-    # audio, sampling_rate = read_wave_from_file(audio_path)
-    # feature = get_feature(audio, sampling_rate, 128)
+    audio_path = '/media/dapeng/Documents/DataSet/Audio/dev_set/dev/5_1812/5_1812_20170628135834.wav'
+    # audio_path = '../../party-crowd.wav'
+    audio, sampling_rate = read_wave_from_file(audio_path)
+    feature = get_feature(audio, sampling_rate, 128)
     # feature = concat_frame(feature, 3, 0)
     # feature = subsampling(feature, 3)
-    # feature = feature[None, :, :]
-    # feature = torch.tensor(feature)
+    feature = feature[None, :, :]
+    feature_1 = feature.copy()
+    feature = torch.tensor(feature)
+    feature_1 = torch.tensor(feature_1)
     # feature = torch.cat((feature, feature), 0)
-    #
-    # print(feature.shape)
-    # tensor_to_img(torch.reshape(feature, (-1, 512)))
-    #
-    # combined = time_mask_augment(
-    #     frequency_mask_augment(feature, max_mask_frequency=5, mask_num=10),
-    #     max_mask_time=5,
-    #     mask_num=10)
-    # tensor_to_img(torch.reshape(feature, (-1, 512)))
+
+    print(feature.shape)
+    tensor_to_img(feature)
+    feature_f = frequency_mask_augment(feature, max_mask_frequency=5, mask_num=10)
+    tensor_to_img(feature_f)
+
+    combined = time_mask_augment(feature_1, max_mask_time=5, mask_num=10)
+    tensor_to_img(combined)
 
     # 测试特征提取平滑
     # a = np.random.randint(low=0, high=16, size=(15519,), dtype=np.int)

@@ -5,16 +5,20 @@
 # @Contact : zzp_dapeng@163.com
 # @Time    : 2020/8/11 上午10:20
 import wave
+import os
 import yaml
 import torch
-from tt.utils import AttrDict, read_wave_from_file, get_feature, concat_frame, subsampling, dict_map
+from tt.utils import AttrDict, read_wave_from_file, get_feature, concat_frame, subsampling, dict_map, context_mask, \
+    computer_cer
 from tt.model import Transducer
 
-WAVE_OUTPUT_FILENAME = 'audio/output_15s.wav'
+os.chdir('../')
+
+WAVE_OUTPUT_FILENAME = 'audio/luyin.wav'
 
 
 def init_model():
-    config_file = open("config/joint.yaml", encoding='utf-8')
+    config_file = open("config/joint_streaming.yaml", encoding='utf-8')
     config = AttrDict(yaml.load(config_file, Loader=yaml.FullLoader))
     model = Transducer(config.model)
     checkpoint = torch.load(config.training.load_model)
@@ -50,6 +54,16 @@ def pred():
     len = feature.shape[1]
     len = torch.tensor([len])
     len = len.cuda()
-    preds = model.recognize(feature, len)
+    audio_mask = context_mask(feature)[:, :, None]  # 流式语音识别
+    # preds = model.recognize(feature, len, audio_mask)
+    preds = model.recognize_beam_search(feature, len, audio_mask)
     preds = dict_map(preds, vocab)
-    print(''.join(preds[0]))
+    # groundtruth = ["疑点之一美方对境内疫情发展时时间线一直讳莫如深唯恐避之不及这不由令人质疑其疫情爆发的时间起点疑点之二"]
+    groundtruth = ["那叫名人呢干嘛要划类啊一分类就有就有帮派了嘛人不要那么化类就是会有对立面不好所以我说通常有命题的话题都不要提"]
+    res = ''.join(preds[0])
+    dist, num = computer_cer([res], groundtruth)
+    print(dist / num, res)
+
+
+if __name__ == '__main__':
+    pred()

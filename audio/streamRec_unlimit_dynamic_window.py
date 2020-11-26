@@ -21,7 +21,6 @@ from tt.utils import concat_frame, subsampling, generate_dictionary, get_feature
 class StreamRec:
     def __init__(self,
                  config=None,
-                 pred_frame=18,
                  chunk=1024,  # or 1024 = 32 * 32
                  sample_width=2,
                  channels=1,
@@ -113,6 +112,7 @@ class StreamRec:
         zero_token = zero_token.cuda()
         dec_state = self.model.decoder(zero_token)
         last_clip = False
+        blank_frame = 0
         # todo:流式识别具体过程
         while True:  # 第一层窗口
             # print('win_audio_position, ', self.win_audio_position)
@@ -190,18 +190,25 @@ class StreamRec:
                         pred = torch.argmax(out, dim=0)
                         pred = int(pred.item())
                         if pred != 0:
+                            if blank_frame >= 15:  # 分句
+                                self.text.insert('end', '\n')
+                                self.text.update()
+                                # self.result.clear()
                             self.result.append(pred)
                             word = self.dictionary[pred]
                             self.text.insert('end', word)
                             self.text.update()
-                            result_len = len(self.result)
-                            if result_len > 40:
+                            if len(self.result) > 40:  #
                                 effect_token = self.result[-40:]
                             else:
                                 effect_token = self.result
                             token = torch.tensor([effect_token], dtype=torch.long)
                             token = token.cuda()
                             dec_state = self.model.decoder(token)[:, -1, :]  # 历史信息输入，但是只取最后一个输出
+                            print(blank_frame, word)
+                            blank_frame = 0
+                        elif pred == 0 and len(self.result) > 0:
+                            blank_frame += 1
                     # print('effect_start:', effect_start)
                     # print('effect_end:', effect_end)
                     # print('effect_len:', effect_len)
@@ -226,13 +233,14 @@ class StreamRec:
         :return:
         """
         self.audio_data = np.empty((0,), dtype=np.short)
-        self.frame_num = 0
-        self.win_audio_position = 0
-        self.win_feature_position = 0
-        self.result = []
         self.feature_log_mel = np.empty((0, 128), dtype=np.float32)
         self.feature_concat = np.empty((0, 512), dtype=np.float32)
         self.feature_subsample = np.empty((0, 512), dtype=np.float32)
+        self.frame_num = 0
+        self.max_frame_num = 0
+        self.win_audio_position = 0
+        self.win_feature_position = 0
+        self.result = []
 
     def save_audio(self, file_name=None):
         if file_name is None:

@@ -142,7 +142,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
 def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     parser = argparse.ArgumentParser()
-    parser.add_argument('-config', type=str, default='config/myjoint.yaml')
+    parser.add_argument('-config', type=str, default='config/joint_streaming.yaml')
     parser.add_argument('-log', type=str, default='train.log')
     parser.add_argument('-mode', type=str, default='retrain')
     opt = parser.parse_args()
