@@ -45,10 +45,10 @@ model:
     vocab_size: 6485
     share_weight: False
     feature_dim:
-    dropout: 0.1
+    dropout: 0.5
 training:
     exp_name: non-streaming_asr
-    load_model: assets/streaming_18_2_2048_batch4_epoch6_train.epoch14.chkpt
+    load_model: assets/streaming_18_2_2048_batch4_epoch6_train.epoch18.chkpt
     load_encoder: False
     load_decoder: False
     eval_or_not: True
