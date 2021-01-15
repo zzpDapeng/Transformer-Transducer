@@ -186,6 +186,23 @@ def get_feature(wave_data, framerate, feature_dim=128):
     """
     wave_data = wave_data.astype("float32")
     specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=feature_dim)
+    print(specgram)
+    specgram = np.ma.log(specgram).T
+    specgram = specgram.filled(0)
+    return specgram
+
+
+def get_feature2(wave_data, framerate, feature_dim=128):
+    """
+    :param wave_data: 一维numpy,dtype=int16
+    :param framerate:
+    :param feature_dim:
+    :return: specgram [序列长度,特征维度]
+    """
+    wave_data = wave_data.astype("float32")
+    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, win_length=512, hop_length=160,
+                                              n_mels=feature_dim)
+    print(specgram)
     specgram = np.ma.log(specgram).T
     specgram = specgram.filled(0)
     return specgram
@@ -232,7 +249,8 @@ def context_mask(audio, left_context=10, right_context=2):
     seq_len = audio.size(1)
     up = torch.triu(audio.new_ones([seq_len, seq_len]), diagonal=right_context + 1)
     down = torch.tril(audio.new_ones([seq_len, seq_len]), diagonal=-left_context - 1)
-    mask_context = (up + down).bool()
+    # mask_context = (up + down).bool()
+    mask_context = (up + down)  # 不转换成bool，在模型中使用mask时再转换，因为安卓端不支持bool类型tensor
     return mask_context
 
 
@@ -331,47 +349,9 @@ def save_wav(file_name, audio_data, channels=1, sample_width=2, rate=16000):
 
 
 if __name__ == '__main__':
-    # 测试mask
-    # a1 = torch.randn([2, 8, 512])
-    # a21 = torch.randn([1, 2, 512])
-    # a22 = torch.zeros([1, 2, 512])
-    # a2 = torch.cat([a21, a22], dim=0)
-    # audio = torch.cat([a1, a2], dim=1)
-    #
-    # l = torch.tensor([[0, 6, 7, 3, 4, 1, 2, 4, 3, 8],
-    #                   [0, 6, 7, 3, 4, 1, 2, 4, 0, 0]])
-    # audio_mask, label_mask = create_mask(audio, l)
-    # print(audio_mask.shape)
-    # print(audio_mask)
-    # print(label_mask.shape)
-    # print(label_mask)
-
-    # 测试specAugment
-    audio_path = '/media/dapeng/Documents/DataSet/Audio/dev_set/dev/5_1812/5_1812_20170628135834.wav'
-    # audio_path = '../../party-crowd.wav'
-    audio, sampling_rate = read_wave_from_file(audio_path)
-    feature = get_feature(audio, sampling_rate, 128)
-    # feature = concat_frame(feature, 3, 0)
-    # feature = subsampling(feature, 3)
-    feature = feature[None, :, :]
-    feature_1 = feature.copy()
-    feature = torch.tensor(feature)
-    feature_1 = torch.tensor(feature_1)
-    # feature = torch.cat((feature, feature), 0)
-
-    print(feature.shape)
-    tensor_to_img(feature)
-    feature_f = frequency_mask_augment(feature, max_mask_frequency=5, mask_num=10)
-    tensor_to_img(feature_f)
-
-    combined = time_mask_augment(feature_1, max_mask_time=5, mask_num=10)
-    tensor_to_img(combined)
-
-    # 测试特征提取平滑
-    # a = np.random.randint(low=0, high=16, size=(15519,), dtype=np.int)
-    # print(a.shape)
-    # feature = get_feature(a, 16000, 128)
-    # print(feature.shape)
-    # feature = subsampling(feature)
-    # print(feature.shape)
-    pass
+    audio, sr = read_wave_from_file("../audio/luyin.wav")
+    print(audio)
+    feature = get_feature(audio, sr)
+    tensor_to_img(feature[:500])
+    feature = get_feature2(audio, sr)
+    tensor_to_img(feature[:500])

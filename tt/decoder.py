@@ -8,14 +8,13 @@ class BaseDecoder(nn.Module):
     def __init__(self, vocab_size, n_layer, k_len, n_head, d_model, d_head, d_inner, dropout, **kwargs):
         super(BaseDecoder, self).__init__()
 
-        self.r_emb = nn.Parameter(torch.randn((k_len, n_head, d_head),dtype=torch.float32))
+        self.r_emb = nn.Parameter(torch.randn((k_len, n_head, d_head), dtype=torch.float32))
         self.r_w_bias = nn.Parameter(torch.randn((n_head, d_head), dtype=torch.float32))
         self.r_bias = nn.Parameter(torch.randn((k_len, n_head), dtype=torch.float32))
 
         self.MultiHeadAttention = RelLearnableDecoderLayer(n_head, d_model, d_head, d_inner, dropout, **kwargs)
 
     def forward(self, inputs, attn_mask=None):
-
         outputs = self.MultiHeadAttention(inputs, self.r_emb, self.r_w_bias, self.r_bias, attn_mask)
 
         return outputs
@@ -24,7 +23,7 @@ class BaseDecoder(nn.Module):
 class BuildDecoder(nn.Module):
     def __init__(self, config):
         super(BuildDecoder, self).__init__()
-        self.dec_embedding = nn.Embedding(config.vocab_size, config.dec.d_model, padding_idx=0)  #TODO：是否替换？
+        self.dec_embedding = nn.Embedding(config.vocab_size, config.dec.d_model, padding_idx=0)  # TODO：是否替换？
         self.layers = nn.ModuleList([BaseDecoder(
             vocab_size=config.vocab_size,
             n_layer=config.dec.n_layer,

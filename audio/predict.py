@@ -14,7 +14,10 @@ from tt.model import Transducer
 
 os.chdir('../')
 
-WAVE_OUTPUT_FILENAME = 'audio/luyin.wav'
+# WAVE_OUTPUT_FILENAME = 'audio/luyin.wav'
+
+
+WAVE_OUTPUT_FILENAME = 'audio/output_15s.wav'
 
 
 def init_model():
@@ -58,8 +61,8 @@ def pred():
     # preds = model.recognize(feature, len, audio_mask)
     preds = model.recognize_beam_search(feature, len, audio_mask)
     preds = dict_map(preds, vocab)
-    # groundtruth = ["疑点之一美方对境内疫情发展时时间线一直讳莫如深唯恐避之不及这不由令人质疑其疫情爆发的时间起点疑点之二"]
-    groundtruth = ["那叫名人呢干嘛要划类啊一分类就有就有帮派了嘛人不要那么化类就是会有对立面不好所以我说通常有命题的话题都不要提"]
+    groundtruth = ["疑点之一美方对境内疫情发展时时间线一直讳莫如深唯恐避之不及这不由令人质疑其疫情爆发的时间起点疑点之二"]
+    # groundtruth = ["那叫名人呢干嘛要划类啊一分类就有就有帮派了嘛人不要那么化类就是会有对立面不好所以我说通常有命题的话题都不要提"]
     res = ''.join(preds[0])
     dist, num = computer_cer([res], groundtruth)
     print(dist / num, res)

@@ -1,7 +1,4 @@
 import sys
-import math
-import functools
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -82,35 +79,6 @@ class RelMultiHeadAttn(nn.Module):
 
         self.scale = 1 / (d_head ** 0.5)
 
-    def _parallelogram_mask(self, h, w, left=False):
-        mask = torch.ones((h, w)).byte()
-        m = min(h, w)
-        mask[:m, :m] = torch.triu(mask[:m, :m])
-        mask[-m:, -m:] = torch.tril(mask[-m:, -m:])
-
-        if left:
-            return mask
-        else:
-            return mask.flip(0)
-
-    def _shift(self, x, qlen, klen, mask, left=False):
-        if qlen > 1:
-            zero_pad = torch.zeros((x.size(0), qlen - 1, x.size(2), x.size(3)),
-                                   device=x.device, dtype=x.dtype)
-        else:
-            zero_pad = torch.zeros(0, device=x.device, dtype=x.dtype)
-
-        if left:
-            mask = mask.flip(1)
-            x_padded = torch.cat([zero_pad, x], dim=1).expand(qlen, -1, -1, -1)
-        else:
-            x_padded = torch.cat([x, zero_pad], dim=1).expand(qlen, -1, -1, -1)
-
-        x = x_padded.masked_select(mask[:, :, None, None]) \
-            .view(qlen, klen, x.size(2), x.size(3))
-
-        return x
-
     def _rel_shift(self, x, zero_triu=False):
         zero_pad = torch.zeros((x.size(0), 1, *x.size()[2:]),
                                device=x.device, dtype=x.dtype)
@@ -149,12 +117,14 @@ class RelLearnableMultiHeadAttn(RelMultiHeadAttn):
                                                    dim=-1)  # [seq_len, batch_size, n_head*d_head] [18, 2, 512]
 
         klen = w_head_k.size(0)  # seq_len 18
+        # klen = w_head_k.shape[0]  # seq_len 18
 
         w_head_q = w_head_q.view(qlen, bsz, self.n_head,
                                  self.d_head)  # [seq_len, batch_size, n_head, d_head]  [18, 2, 8, 64]
         w_head_k = w_head_k.view(klen, bsz, self.n_head, self.d_head)
         w_head_v = w_head_v.view(klen, bsz, self.n_head, self.d_head)
 
+        # todo:为了导出pytorch脚本，不能有if_else语句，因此默认设置为else，即音频长度不超过410标签长度不超过42
         if klen > r_emb.size(0):  # seq_len > max_len?
             r_emb_pad = r_emb[0:1].expand(klen - r_emb.size(0), -1, -1)
             r_emb = torch.cat([r_emb_pad, r_emb], 0)
@@ -163,6 +133,8 @@ class RelLearnableMultiHeadAttn(RelMultiHeadAttn):
         else:
             r_emb = r_emb[-klen:]
             r_bias = r_bias[-klen:]
+        # r_emb = r_emb[-klen:]
+        # r_bias = r_bias[-klen:]
 
         # compute attention score
         rw_head_q = w_head_q + r_w_bias[None]  # seq_len x batch_size x n_head x d_head  None扩展维度，而不改变数据排列顺序
@@ -176,12 +148,18 @@ class RelLearnableMultiHeadAttn(RelMultiHeadAttn):
         attn_score = AC + BD
         attn_score.mul_(self.scale)
 
+        # todo:为了导出pytorch脚本，不能有if_else语句，因此默认设置为attn_mask.dim() == 3
         # compute attention probability
-        if attn_mask is not None and attn_mask.any().item():
+        # if attn_mask is not None and attn_mask.any().item():
+        if attn_mask is not None:
+            attn_mask = attn_mask.bool()
             if attn_mask.dim() == 2:
                 attn_score.masked_fill_(attn_mask[None, :, :, None], -float('inf'))  # context mask (seq, batch)
             elif attn_mask.dim() == 3:
                 attn_score.masked_fill_(attn_mask[:, :, :, None], -float('inf'))  # (seq, seq, batch)
+        # todo:标签编码的时候去掉mask
+        # print(attn_mask.shape)
+        # attn_score.masked_fill_(attn_mask[:, :, :, None], -float('inf'))  # (seq, seq, batch)
 
         attn_prob = F.softmax(attn_score, dim=1)
         attn_prob = self.dropatt(attn_prob)

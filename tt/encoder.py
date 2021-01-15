@@ -15,14 +15,13 @@ class BaseEncoder(nn.Module):
                  **kwargs):
         super(BaseEncoder, self).__init__()
 
-        self.r_emb = nn.Parameter(torch.randn((k_len, n_head, d_head),dtype=torch.float32))
+        self.r_emb = nn.Parameter(torch.randn((k_len, n_head, d_head), dtype=torch.float32))
         self.r_w_bias = nn.Parameter(torch.randn((n_head, d_head), dtype=torch.float32))
         self.r_bias = nn.Parameter(torch.randn((k_len, n_head), dtype=torch.float32))
 
         self.MultiHeadAttention = RelLearnableDecoderLayer(n_head, d_model, d_head, d_inner, dropout, **kwargs, )
 
     def forward(self, inputs, enc_attn_mask=None):
-
         assert inputs.dim() == 3
 
         outputs = self.MultiHeadAttention(inputs, self.r_emb, self.r_w_bias, self.r_bias, enc_attn_mask)
