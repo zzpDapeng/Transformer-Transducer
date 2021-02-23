@@ -8,7 +8,7 @@ from typing import Tuple
 import torch
 from typeguard import check_argument_types
 
-from espnet.nets.pytorch_backend.nets_utils import make_pad_mask, get_activation
+from espnet.nets.pytorch_backend.nets_utils import make_pad_mask, get_activation, make_attention_mask
 from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention
 from espnet.nets.pytorch_backend.transformer.attention import RelPositionMultiHeadedAttention
 from espnet.nets.pytorch_backend.transformer.embedding import PositionalEncoding, ScaledPositionalEncoding, \
@@ -71,7 +71,7 @@ class TransformerEncoder(AbsEncoder):
             positionwise_layer_type: str = "linear",
             positionwise_conv_kernel_size: int = 1,
             pos_enc_layer_type: str = "rel_pos",
-            selfattention_layer_type: str ="rel_selfattn",
+            selfattention_layer_type: str = "rel_selfattn",
             activation_type='relu',
             padding_idx: int = -1,
     ):
@@ -189,6 +189,8 @@ class TransformerEncoder(AbsEncoder):
             self,
             xs_pad: torch.Tensor,
             ilens: torch.Tensor,
+            left_mask: int = -1,
+            right_mask: int = -1,
             prev_states: torch.Tensor = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
         """Embed positions in tensor.
@@ -200,7 +202,12 @@ class TransformerEncoder(AbsEncoder):
         Returns:
             position embedded tensor and mask
         """
-        masks = (~make_pad_mask(ilens)[:, None, :]).to(xs_pad.device)
+        # pad mask
+        masks = (~make_pad_mask(ilens)[:, None, :]).to(xs_pad.device)  # (B, 1, L)
+        # attention mask todo:check attention mask
+        if right_mask >= 0 or left_mask >= 0:
+            attention_mask = ~make_attention_mask(xs_pad, left_mask, right_mask)[None, :, :]  # (L, L)
+            masks = masks & attention_mask
 
         # embed
         if (

@@ -265,6 +265,22 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
     return ~make_pad_mask(lengths, xs, length_dim)
 
 
+def make_attention_mask(xs, left_mask, right_mask):
+    """
+    context mask
+    """
+    seq_len = xs.size(1)
+    if left_mask < 0:
+        left_mask = seq_len
+    if right_mask < 0:
+        right_mask = seq_len
+    up = torch.triu(xs.new_ones([seq_len, seq_len]), diagonal=right_mask + 1)
+    down = torch.tril(xs.new_ones([seq_len, seq_len]), diagonal=-left_mask - 1)
+    mask_context = (up + down).bool().to(xs.device)
+    # mask_context = (up + down)  # 不转换成bool，在模型中使用mask时再转换，因为安卓端不支持bool类型tensor
+    return mask_context
+
+
 def mask_by_length(xs, lengths, fill=0):
     """Mask tensor according to length.
 
@@ -409,9 +425,9 @@ def get_subsample(train_args, mode, arch):
         return subsample
 
     elif (
-        (mode == "asr" and arch in ("rnn", "rnn-t"))
-        or (mode == "mt" and arch == "rnn")
-        or (mode == "st" and arch == "rnn")
+            (mode == "asr" and arch in ("rnn", "rnn-t"))
+            or (mode == "mt" and arch == "rnn")
+            or (mode == "st" and arch == "rnn")
     ):
         subsample = np.ones(train_args.elayers + 1, dtype=np.int)
         if train_args.etype.endswith("p") and not train_args.etype.startswith("vgg"):
@@ -433,7 +449,7 @@ def get_subsample(train_args, mode, arch):
         if train_args.etype.endswith("p") and not train_args.etype.startswith("vgg"):
             ss = train_args.subsample.split("_")
             for j in range(
-                min(train_args.elayers_sd + train_args.elayers + 1, len(ss))
+                    min(train_args.elayers_sd + train_args.elayers + 1, len(ss))
             ):
                 subsample[j] = int(ss[j])
         else:
@@ -469,7 +485,7 @@ def get_subsample(train_args, mode, arch):
 
 
 def rename_state_dict(
-    old_prefix: str, new_prefix: str, state_dict: Dict[str, torch.Tensor]
+        old_prefix: str, new_prefix: str, state_dict: Dict[str, torch.Tensor]
 ):
     """Replace keys of old prefix with new prefix in state dict."""
     # need this list not to break the dict iterator

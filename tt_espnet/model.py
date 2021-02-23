@@ -19,11 +19,17 @@ class TransformerTransducer(nn.Module):
                  vocab_size: int,
                  encoder_layer_num: int = 18,
                  decoder_layer_num: int = 2,
+                 encoder_left_mask: int = 10,
+                 encoder_right_mask: int = 2,
+                 decoder_left_mask: int = 10,
                  ):
         super(TransformerTransducer, self).__init__()
         self.sos = vocab_size - 1
         self.eos = vocab_size - 1
         self.ignore_id = -1
+        self.encoder_left_mask = encoder_left_mask,
+        self.encoder_right_mask = encoder_right_mask,
+        self.decoder_left_mask = decoder_left_mask,
         self.encoder = TransformerEncoder(input_size=512,
                                           output_size=512,
                                           attention_heads=8,
@@ -83,13 +89,19 @@ class TransformerTransducer(nn.Module):
                 text_lengths.shape[0]), (speech.shape, speech_lengths.shape,
                                          text.shape, text_lengths.shape)
         # 1. Encoder
-        encoder_out, encoder_out_lens, _ = self.encoder(speech, speech_lengths)  # return xs_pad, olens, None
+        encoder_out, encoder_out_lens, _ = self.encoder(speech,
+                                                        speech_lengths,
+                                                        left_mask=self.encoder_left_mask,
+                                                        right_mask=self.encoder_right_mask)  # return xs_pad, olens, None
 
         # 2. Decoder
         # todo: text right shift
         text_in, text_out = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
         text_in_lens = text_lengths + 1
-        decoder_out, decoder_out_lens, _ = self.decoder(text_in, text_in_lens)  # return xs_pad, olens, None
+        decoder_out, decoder_out_lens, _ = self.decoder(text_in,
+                                                        text_in_lens,
+                                                        left_mask=self.decoder_left_mask,
+                                                        right_mask=0)  # return xs_pad, olens, None
 
         # 3.Joint
         # h_enc: Batch of expanded hidden state (B, T, 1, D_enc)
@@ -104,8 +116,10 @@ class TransformerTransducer(nn.Module):
                          target=text.int(),  # (batch, maxlen_out)
                          pred_len=speech_lengths.int(),  # (batch)
                          target_len=text_lengths.int())  # (batch)
-
         return loss
+
+    def recognize(self):
+        pass
 
 
 if __name__ == '__main__':
