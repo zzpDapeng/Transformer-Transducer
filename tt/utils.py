@@ -186,7 +186,6 @@ def get_feature(wave_data, framerate, feature_dim=128):
     """
     wave_data = wave_data.astype("float32")
     specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=feature_dim)
-    print(specgram)
     specgram = np.ma.log(specgram).T
     specgram = specgram.filled(0)
     return specgram
@@ -200,11 +199,9 @@ def get_feature2(wave_data, framerate, feature_dim=128):
     :return: specgram [序列长度,特征维度]
     """
     wave_data = wave_data.astype("float32")
-    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, win_length=512, hop_length=160,
-                                              n_mels=feature_dim)
-    print(specgram)
-    specgram = np.ma.log(specgram).T
-    specgram = specgram.filled(0)
+    specgram = librosa.feature.melspectrogram(wave_data, sr=framerate, n_fft=512, hop_length=160, n_mels=feature_dim)
+    specgram = np.where(specgram == 0, np.finfo(float).eps, specgram)
+    specgram = np.log10(specgram).T
     return specgram
 
 
@@ -349,8 +346,7 @@ def save_wav(file_name, audio_data, channels=1, sample_width=2, rate=16000):
 
 
 if __name__ == '__main__':
-    audio, sr = read_wave_from_file("../audio/luyin.wav")
-    print(audio)
+    audio, sr = read_wave_from_file("../audio.wav")
     feature = get_feature(audio, sr)
     tensor_to_img(feature[:500])
     feature = get_feature2(audio, sr)
