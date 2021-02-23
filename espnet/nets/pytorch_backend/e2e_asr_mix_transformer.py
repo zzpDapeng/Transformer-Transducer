@@ -110,7 +110,7 @@ class E2E(E2EASR, ASRInterface, torch.nn.Module):
         self.hs_pad = hs_pad
 
         # 2. ctc
-        # TODO(karita) show predicted text
+        # TODO(karita) show predicted train
         # TODO(karita) calculate these stats
         cer_ctc = None
         assert self.mtlalpha > 0.0
@@ -138,7 +138,7 @@ class E2E(E2EASR, ASRInterface, torch.nn.Module):
             float(torch.sum(ys_pad[i] != self.ignore_id)) for i in range(self.num_spkrs)
         ]
 
-        # TODO(karita) show predicted text
+        # TODO(karita) show predicted train
         # TODO(karita) calculate these stats
         if self.error_calculator is not None:
             cer_ctc = []

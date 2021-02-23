@@ -886,8 +886,8 @@ def add_results_to_json(js, nbest_hyps, char_list):
 
         # show 1-best result
         if n == 1:
-            if "text" in out_dic.keys():
-                logging.info("groundtruth: %s" % out_dic["text"])
+            if "train" in out_dic.keys():
+                logging.info("groundtruth: %s" % out_dic["train"])
             logging.info("prediction : %s" % out_dic["rec_text"])
 
     return new_js

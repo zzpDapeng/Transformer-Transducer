@@ -214,8 +214,8 @@ class StreamRec:
         # 循环监听音频流是否录制完成 用上面的替换
         # while self.stream.is_active():
         #     time.sleep(1)
-        #     self.text.insert('end', '你')
-        #     self.text.update()
+        #     self.train.insert('end', '你')
+        #     self.train.update()
 
         self.stream.stop_stream()
         self.stream.close()
@@ -268,8 +268,8 @@ class StreamRec:
         self.start_rec()
 
     # except:
-    #     self.text.insert('end', 'Error Record!')
-    #     self.text.update()
+    #     self.train.insert('end', 'Error Record!')
+    #     self.train.update()
 
     def __init_view(self):
         self.window.title('TT流式语音识别系统')

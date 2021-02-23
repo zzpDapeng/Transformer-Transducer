@@ -15,58 +15,19 @@ from espnet.nets.pytorch_backend.transducer.loss import TransLoss
 
 
 class TransformerTransducer(nn.Module):
-    def __init__(self,
-                 vocab_size: int,
-                 encoder_layer_num: int = 18,
-                 decoder_layer_num: int = 2,
-                 encoder_left_mask: int = 10,
-                 encoder_right_mask: int = 2,
-                 decoder_left_mask: int = 10,
-                 ):
+    def __init__(self, config):
         super(TransformerTransducer, self).__init__()
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
+        self.vocab_size = config.joint.vocab_size
+        self.sos = self.vocab_size - 1
+        self.eos = self.vocab_size - 1
         self.ignore_id = -1
-        self.encoder_left_mask = encoder_left_mask,
-        self.encoder_right_mask = encoder_right_mask,
-        self.decoder_left_mask = decoder_left_mask,
-        self.encoder = TransformerEncoder(input_size=512,
-                                          output_size=512,
-                                          attention_heads=8,
-                                          linear_units=2048,
-                                          num_blocks=encoder_layer_num,
-                                          dropout_rate=0.1,
-                                          positional_dropout_rate=0.1,
-                                          attention_dropout_rate=0.1,
-                                          input_layer=None,
-                                          pos_enc_layer_type="rel_pos",
-                                          selfattention_layer_type="rel_selfattn",
-                                          normalize_before=True,
-                                          concat_after=False,
-                                          positionwise_layer_type='linear',
-                                          positionwise_conv_kernel_size=1,
-                                          padding_idx=-1)
-        self.decoder = TransformerEncoder(input_size=vocab_size,  # vocab size
-                                          output_size=512,
-                                          attention_heads=8,
-                                          linear_units=2048,
-                                          num_blocks=decoder_layer_num,
-                                          dropout_rate=0.1,
-                                          positional_dropout_rate=0.1,
-                                          attention_dropout_rate=0.1,
-                                          input_layer='embed',  #
-                                          pos_enc_layer_type="rel_pos",
-                                          selfattention_layer_type="rel_selfattn",
-                                          normalize_before=True,
-                                          concat_after=False,
-                                          positionwise_layer_type='linear',
-                                          positionwise_conv_kernel_size=1,
-                                          padding_idx=-1)
-        self.joint = JointNetwork(vocab_size=vocab_size,
-                                  encoder_output_size=512,
-                                  decoder_output_size=512,
-                                  joint_space_size=1024,  # todo:not sure
-                                  joint_activation_type='tanh')
+        self.encoder_left_mask = config.mask.encoder_left_mask
+        self.encoder_right_mask = config.mask.encoder_right_mask
+        self.decoder_left_mask = config.mask.decoder_left_mask
+
+        self.encoder = TransformerEncoder(**config.enc)
+        self.decoder = TransformerEncoder(**config.dec)
+        self.joint = JointNetwork(**config.joint)
         self.loss = TransLoss(trans_type="warp-transducer",
                               blank_id=0)  # todo: check blank id
 
@@ -95,7 +56,7 @@ class TransformerTransducer(nn.Module):
                                                         right_mask=self.encoder_right_mask)  # return xs_pad, olens, None
 
         # 2. Decoder
-        # todo: text right shift
+        # todo: train right shift
         text_in, text_out = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
         text_in_lens = text_lengths + 1
         decoder_out, decoder_out_lens, _ = self.decoder(text_in,
@@ -120,6 +81,10 @@ class TransformerTransducer(nn.Module):
 
     def recognize(self):
         pass
+
+
+def init_asr_model(configs):
+    pass
 
 
 if __name__ == '__main__':

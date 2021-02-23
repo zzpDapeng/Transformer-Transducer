@@ -13,8 +13,8 @@ import numpy as np
 class ErrorCalculator(object):
     """Calculate BLEU for ST and MT models during training.
 
-    :param y_hats: numpy array with predicted text
-    :param y_pads: numpy array with true (target) text
+    :param y_hats: numpy array with predicted train
+    :param y_pads: numpy array with true (target) train
     :param char_list: vocabulary list
     :param sym_space: space symbol
     :param sym_pad: pad symbol

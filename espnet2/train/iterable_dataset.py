@@ -60,7 +60,7 @@ DATA_TYPES = {
     "csv_float": lambda x: np.loadtxt(
         StringIO(x), ndmin=1, dtype=np.float32, delimiter=","
     ),
-    "text": lambda x: x,
+    "train": lambda x: x,
 }
 
 
@@ -68,7 +68,7 @@ class IterableESPnetDataset(IterableDataset):
     """Pytorch Dataset class for ESPNet.
 
     Examples:
-        >>> dataset = IterableESPnetDataset([('wav.scp', 'input', 'sound'),
+        >>> dataset = IterableESPnetDataset([('train.scp', 'input', 'sound'),
         ...                                  ('token_int', 'output', 'text_int')],
         ...                                )
         >>> for uid, data in dataset:

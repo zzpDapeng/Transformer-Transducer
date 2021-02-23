@@ -4,7 +4,7 @@ import numpy as np
 import pandas
 from augment.audio_augment import audio_augment
 import tt.kaldi_io as kaldi_io
-from tt.utils import get_feature, read_wave_from_file, concat_frame, subsampling
+from tt.utils import get_feature, get_feature2, read_wave_from_file, concat_frame, subsampling
 
 
 class Dataset:
@@ -19,6 +19,7 @@ class Dataset:
         self.apply_cmvn = config.apply_cmvn
         self.max_input_length = config.max_input_length
         self.max_target_length = config.max_target_length
+        self.ignore_id = config.ignore_id
 
         # self.arkscp = os.path.join(config.__getattr__(type), 'feats.scp')
 
@@ -43,6 +44,8 @@ class Dataset:
             if max_length is None:
                 max_length = self.max_target_length
             pad_zeros_mat = np.zeros([1, max_length - inputs.shape[0]], dtype=np.int32)
+            # todo: replace 0 to  IGNOREID
+            pad_zeros_mat = pad_zeros_mat + self.ignore_id
             padded_inputs = np.column_stack([inputs.reshape(1, -1), pad_zeros_mat])
         elif dim == 2:
             if max_length is None:
@@ -86,9 +89,10 @@ class AudioDataset(Dataset):
         targets = np.array(self.encode(label))
         wave_data, frame_rate = read_wave_from_file(audio_path)
         # 数据增强
-        wave_data = audio_augment(wave_data)
+        # wave_data = audio_augment(wave_data)
         # 特征提取
-        features = get_feature(wave_data, frame_rate, self.feature_dim)
+        # features = get_feature(wave_data, frame_rate, self.feature_dim)
+        features = get_feature2(wave_data, frame_rate, self.feature_dim)
         # features = np.load(feats_scp)
         features = concat_frame(features, self.left_context_width, self.right_context_width)
         features = subsampling(features, self.subsample)

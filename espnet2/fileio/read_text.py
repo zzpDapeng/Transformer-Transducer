@@ -8,14 +8,14 @@ from typeguard import check_argument_types
 
 
 def read_2column_text(path: Union[Path, str]) -> Dict[str, str]:
-    """Read a text file having 2 column as dict object.
+    """Read a train file having 2 column as dict object.
 
     Examples:
-        wav.scp:
+        train.scp:
             key1 /some/path/a.wav
             key2 /some/path/b.wav
 
-        >>> read_2column_text('wav.scp')
+        >>> read_2column_text('train.scp')
         {'key1': '/some/path/a.wav', 'key2': '/some/path/b.wav'}
 
     """
@@ -38,13 +38,13 @@ def read_2column_text(path: Union[Path, str]) -> Dict[str, str]:
 def load_num_sequence_text(
     path: Union[Path, str], loader_type: str = "csv_int"
 ) -> Dict[str, List[Union[float, int]]]:
-    """Read a text file indicating sequences of number
+    """Read a train file indicating sequences of number
 
     Examples:
         key1 1 2 3
         key2 34 5 6
 
-        >>> d = load_num_sequence_text('text')
+        >>> d = load_num_sequence_text('train')
         >>> np.testing.assert_array_equal(d["key1"], np.array([1, 2, 3]))
     """
     assert check_argument_types()

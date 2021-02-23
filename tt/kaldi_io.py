@@ -106,7 +106,7 @@ def popen(cmd, mode="rb"):
             raise SubprocessFailed('cmd %s returned %d !' % (cmd, ret))
         return
 
-    # text-mode,
+    # train-mode,
     if mode == "r":
         proc = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=sys.stderr)
@@ -141,7 +141,7 @@ def read_key(fd):
     """ [key] = read_key(fd)
      Read the utterance-key from the opened ark/stream descriptor 'fd'.
     """
-    assert('b' in fd.mode), "Error: 'fd' was opened in text mode (in python3 use sys.stdin.buffer)"
+    assert('b' in fd.mode), "Error: 'fd' was opened in train mode (in python3 use sys.stdin.buffer)"
 
     key = ''
     while 1:

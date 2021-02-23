@@ -44,7 +44,7 @@ class Decoder(torch.nn.Module, ScorerInterface):
     :param float sampling_probability: scheduled sampling probability
     :param float dropout: dropout rate
     :param float context_residual: if True, use context vector for token generation
-    :param float replace_sos: use for multilingual (speech/text) translation
+    :param float replace_sos: use for multilingual (speech/train) translation
     """
 
     def __init__(

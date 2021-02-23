@@ -155,7 +155,7 @@ class ASRTask(AbsTask):
             "--token_list",
             type=str_or_none,
             default=None,
-            help="A text mapping int-id to token",
+            help="A train mapping int-id to token",
         )
         group.add_argument(
             "--init",
@@ -204,7 +204,7 @@ class ASRTask(AbsTask):
             type=str,
             default="bpe",
             choices=["bpe", "char", "word", "phn"],
-            help="The text will be tokenized " "in the specified level token",
+            help="The train will be tokenized " "in the specified level token",
         )
         group.add_argument(
             "--bpemodel",
@@ -222,7 +222,7 @@ class ASRTask(AbsTask):
             type=str_or_none,
             choices=[None, "tacotron", "jaconv", "vietnamese"],
             default=None,
-            help="Apply text cleaning",
+            help="Apply train cleaning",
         )
         parser.add_argument(
             "--g2p",
@@ -324,7 +324,7 @@ class ASRTask(AbsTask):
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
         if not inference:
-            retval = ("speech", "text")
+            retval = ("speech", "train")
         else:
             # Recognition mode
             retval = ("speech",)

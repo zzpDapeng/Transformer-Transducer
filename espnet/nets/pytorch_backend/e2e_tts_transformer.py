@@ -115,7 +115,7 @@ else:
 class Transformer(TTSInterface, torch.nn.Module):
     """Text-to-Speech Transformer module.
 
-    This is a module of text-to-speech Transformer described
+    This is a module of train-to-speech Transformer described
     in `Neural Speech Synthesis with Transformer Network`_,
     which convert the sequence of characters
     or phonemes into the sequence of Mel-filterbanks.

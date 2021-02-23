@@ -138,8 +138,8 @@ class Text2Speech:
 
         if isinstance(text, str):
             # str -> np.ndarray
-            text = self.preprocess_fn("<dummy>", {"text": text})["text"]
-        batch = {"text": text}
+            text = self.preprocess_fn("<dummy>", {"train": text})["train"]
+        batch = {"train": text}
         if speech is not None:
             batch["speech"] = speech
         if durations is not None:

@@ -123,7 +123,7 @@ def get_num_frames_writer(write_num_frames: str):
         nframes_type, nframes_file = write_num_frames.split(":", 1)
         if nframes_type != "ark,t":
             raise ValueError(
-                "Only supporting text mode. "
+                "Only supporting train mode. "
                 "e.g. --write-num-frames=ark,t:foo.txt :"
                 "{}".format(nframes_type)
             )
@@ -255,7 +255,7 @@ class SoundWriter(BaseWriter):
     def __init__(self, wspecifier, write_num_frames=None, pcm_format="wav"):
         self.pcm_format = pcm_format
         spec_dict = parse_wspecifier(wspecifier)
-        # e.g. ark,scp:dirname,wav.scp
+        # e.g. ark,scp:dirname,train.scp
         # -> The wave files are found in dirname/*.wav
         self.dirname = spec_dict["ark"]
         Path(self.dirname).mkdir(parents=True, exist_ok=True)

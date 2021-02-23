@@ -180,7 +180,7 @@ def add_results_to_json(js, nbest_hyps_sd, char_list):
 
             # show 1-best result
             if n == 1:
-                logging.info("groundtruth: %s" % out_dic["text"])
+                logging.info("groundtruth: %s" % out_dic["train"])
                 logging.info("prediction : %s" % out_dic["rec_text"])
 
         new_js["output"].append(tmp_js)

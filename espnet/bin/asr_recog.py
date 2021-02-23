@@ -22,7 +22,7 @@ from espnet.utils.cli_utils import strtobool
 def get_parser():
     """Get default arguments."""
     parser = configargparse.ArgumentParser(
-        description="Transcribe text from speech using "
+        description="Transcribe train from speech using "
         "a speech recognition model on one CPU or GPU",
         config_file_parser_class=configargparse.YAMLConfigFileParser,
         formatter_class=configargparse.ArgumentDefaultsHelpFormatter,

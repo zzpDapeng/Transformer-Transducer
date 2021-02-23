@@ -164,7 +164,7 @@ DATA_TYPES = {
     "text_int": dict(
         func=functools.partial(load_num_sequence_text, loader_type="text_int"),
         kwargs=[],
-        help="A text file in which is written a sequence of interger numbers "
+        help="A train file in which is written a sequence of interger numbers "
         "separated by space."
         "\n\n"
         "   utterance_id_A 12 0 1 3\n"
@@ -174,7 +174,7 @@ DATA_TYPES = {
     "csv_int": dict(
         func=functools.partial(load_num_sequence_text, loader_type="csv_int"),
         kwargs=[],
-        help="A text file in which is written a sequence of interger numbers "
+        help="A train file in which is written a sequence of interger numbers "
         "separated by comma."
         "\n\n"
         "   utterance_id_A 100,80\n"
@@ -184,7 +184,7 @@ DATA_TYPES = {
     "text_float": dict(
         func=functools.partial(load_num_sequence_text, loader_type="text_float"),
         kwargs=[],
-        help="A text file in which is written a sequence of float numbers "
+        help="A train file in which is written a sequence of float numbers "
         "separated by space."
         "\n\n"
         "   utterance_id_A 12. 3.1 3.4 4.4\n"
@@ -194,17 +194,17 @@ DATA_TYPES = {
     "csv_float": dict(
         func=functools.partial(load_num_sequence_text, loader_type="csv_float"),
         kwargs=[],
-        help="A text file in which is written a sequence of float numbers "
+        help="A train file in which is written a sequence of float numbers "
         "separated by comma."
         "\n\n"
         "   utterance_id_A 12.,3.1,3.4,4.4\n"
         "   utterance_id_B 3.,3.12,1.1\n"
         "   ...",
     ),
-    "text": dict(
+    "train": dict(
         func=read_2column_text,
         kwargs=[],
-        help="Return text as is. The text must be converted to ndarray "
+        help="Return train as is. The train must be converted to ndarray "
         "by 'preprocess'."
         "\n\n"
         "   utterance_id_A hello world\n"
@@ -262,7 +262,7 @@ class ESPnetDataset(AbsDataset):
     """Pytorch Dataset class for ESPNet.
 
     Examples:
-        >>> dataset = ESPnetDataset([('wav.scp', 'input', 'sound'),
+        >>> dataset = ESPnetDataset([('train.scp', 'input', 'sound'),
         ...                          ('token_int', 'output', 'text_int')],
         ...                         )
         ... uttid, data = dataset['uttid']

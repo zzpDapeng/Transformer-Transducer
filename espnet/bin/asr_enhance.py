@@ -73,7 +73,7 @@ def get_parser():
         type=str,
         default=None,
         help="Specify the output way for enhanced speech."
-        "e.g. ark,scp:outdir,wav.scp",
+        "e.g. ark,scp:outdir,train.scp",
     )
     parser.add_argument(
         "--enh-filetype",

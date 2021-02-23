@@ -1,7 +1,7 @@
 # Copyright 2019 Kyoto University (Hirofumi Inaguma)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-"""RNN sequence-to-sequence text translation model (pytorch)."""
+"""RNN sequence-to-sequence train translation model (pytorch)."""
 
 import argparse
 import logging
@@ -264,9 +264,9 @@ class E2E(MTInterface, torch.nn.Module):
 
         :param torch.Tensor xs_pad: batch of padded input sequences (B, Tmax, idim)
         :param torch.Tensor ilens: batch of lengths of input sequences (B)
-        :return: source text without language IDs
+        :return: source train without language IDs
         :rtype: torch.Tensor
-        :return: target text without language IDs
+        :return: target train without language IDs
         :rtype: torch.Tensor
         :return: target language IDs
         :rtype: torch.Tensor (B, 1)
@@ -284,7 +284,7 @@ class E2E(MTInterface, torch.nn.Module):
     def translate(self, x, trans_args, char_list, rnnlm=None):
         """E2E beam search.
 
-        :param ndarray x: input source text feature (B, T, D)
+        :param ndarray x: input source train feature (B, T, D)
         :param Namespace trans_args: argument Namespace containing options
         :param list char_list: list of characters
         :param torch.nn.Module rnnlm: language model module
@@ -320,7 +320,7 @@ class E2E(MTInterface, torch.nn.Module):
         """E2E batch beam search.
 
         :param list xs:
-            list of input source text feature arrays [(T_1, D), (T_2, D), ...]
+            list of input source train feature arrays [(T_1, D), (T_2, D), ...]
         :param Namespace trans_args: argument Namespace containing options
         :param list char_list: list of characters
         :param torch.nn.Module rnnlm: language model module

@@ -26,7 +26,7 @@ from espnet2.tts.gst.style_encoder import StyleEncoder
 
 
 class Tacotron2(AbsTTS):
-    """Tacotron2 module for end-to-end text-to-speech.
+    """Tacotron2 module for end-to-end train-to-speech.
 
     This is a module of Spectrogram prediction network in Tacotron2 described
     in `Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions`_,

@@ -136,7 +136,7 @@ class GlobalMVN(torch.nn.Module):
     """Apply global mean and variance normalization
 
     Args:
-        stats_file(str): npy file of 1-dim array or text file.
+        stats_file(str): npy file of 1-dim array or train file.
             From the _first element to
             the {(len(array) - 1) / 2}th element are treated as
             the sum of features,

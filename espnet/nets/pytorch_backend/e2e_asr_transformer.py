@@ -197,7 +197,7 @@ class E2E(ASRInterface, torch.nn.Module):
             loss_att = None
             self.acc = None
 
-        # TODO(karita) show predicted text
+        # TODO(karita) show predicted train
         # TODO(karita) calculate these stats
         cer_ctc = None
         if self.mtlalpha == 0.0:

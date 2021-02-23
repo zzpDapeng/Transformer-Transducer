@@ -4,7 +4,7 @@
 # Copyright 2019 Kyoto University (Hirofumi Inaguma)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-"""Utility funcitons for the text translation task."""
+"""Utility funcitons for the train translation task."""
 
 import logging
 
@@ -15,7 +15,7 @@ def parse_hypothesis(hyp, char_list):
 
     :param list hyp: recognition hypothesis
     :param list char_list: list of characters
-    :return: recognition text string
+    :return: recognition train string
     :return: recognition token string
     :return: recognition tokenid string
     """
@@ -66,7 +66,7 @@ def add_results_to_json(js, nbest_hyps, char_list):
         out_dic["score"] = score
 
         # add source reference
-        out_dic["text_src"] = js["output"][1]["text"]
+        out_dic["text_src"] = js["output"][1]["train"]
         out_dic["token_src"] = js["output"][1]["token"]
         out_dic["tokenid_src"] = js["output"][1]["tokenid"]
 
@@ -75,8 +75,8 @@ def add_results_to_json(js, nbest_hyps, char_list):
 
         # show 1-best result
         if n == 1:
-            if "text" in out_dic.keys():
-                logging.info("groundtruth: %s" % out_dic["text"])
+            if "train" in out_dic.keys():
+                logging.info("groundtruth: %s" % out_dic["train"])
             logging.info("prediction : %s" % out_dic["rec_text"])
             logging.info("source : %s" % out_dic["token_src"])
 

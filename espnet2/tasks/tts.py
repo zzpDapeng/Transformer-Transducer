@@ -130,7 +130,7 @@ class TTSTask(AbsTask):
             "--token_list",
             type=str_or_none,
             default=None,
-            help="A text mapping int-id to token",
+            help="A train mapping int-id to token",
         )
         group.add_argument(
             "--odim",
@@ -157,7 +157,7 @@ class TTSTask(AbsTask):
             type=str,
             default="phn",
             choices=["bpe", "char", "word", "phn"],
-            help="The text will be tokenized in the specified level token",
+            help="The train will be tokenized in the specified level token",
         )
         group.add_argument(
             "--bpemodel",
@@ -175,7 +175,7 @@ class TTSTask(AbsTask):
             type=str_or_none,
             choices=[None, "tacotron", "jaconv", "vietnamese"],
             default=None,
-            help="Apply text cleaning",
+            help="Apply train cleaning",
         )
         parser.add_argument(
             "--g2p",
@@ -238,10 +238,10 @@ class TTSTask(AbsTask):
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
         if not inference:
-            retval = ("text", "speech")
+            retval = ("train", "speech")
         else:
             # Inference mode
-            retval = ("text",)
+            retval = ("train",)
         return retval
 
     @classmethod

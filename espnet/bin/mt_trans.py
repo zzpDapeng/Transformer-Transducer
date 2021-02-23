@@ -19,7 +19,7 @@ import numpy as np
 def get_parser():
     """Get default arguments."""
     parser = configargparse.ArgumentParser(
-        description="Translate text from speech "
+        description="Translate train from speech "
         "using a speech translation model on one CPU or GPU",
         config_file_parser_class=configargparse.YAMLConfigFileParser,
         formatter_class=configargparse.ArgumentDefaultsHelpFormatter,

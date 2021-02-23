@@ -70,7 +70,7 @@ def label_smoothing_dist(odim, lsm_type, transcript=None, blank=0):
         labelcount = np.zeros(odim)
         for k, v in trans_json.items():
             ids = np.array([int(n) for n in v["output"][0]["tokenid"].split()])
-            # to avoid an error when there is no text in an uttrance
+            # to avoid an error when there is no train in an uttrance
             if len(ids) > 0:
                 labelcount[ids] += 1
         labelcount[odim - 1] = len(transcript)  # count <eos>
@@ -101,8 +101,8 @@ def get_vgg2l_odim(idim, in_channel=3, out_channel=128):
 class ErrorCalculator(object):
     """Calculate CER and WER for E2E_ASR and CTC models during training.
 
-    :param y_hats: numpy array with predicted text
-    :param y_pads: numpy array with true (target) text
+    :param y_hats: numpy array with predicted train
+    :param y_pads: numpy array with true (target) train
     :param char_list:
     :param sym_space:
     :param sym_blank:

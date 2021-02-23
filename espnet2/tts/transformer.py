@@ -33,7 +33,7 @@ from espnet2.tts.gst.style_encoder import StyleEncoder
 class Transformer(AbsTTS):
     """TTS-Transformer module.
 
-    This is a module of text-to-speech Transformer described in `Neural Speech Synthesis
+    This is a module of train-to-speech Transformer described in `Neural Speech Synthesis
     with Transformer Network`_, which convert the sequence of tokens into the sequence
     of Mel-filterbanks.
 

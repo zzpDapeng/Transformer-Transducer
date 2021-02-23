@@ -10,7 +10,7 @@ from espnet2.fileio.read_text import read_2column_text
 
 
 class SoundScpReader(collections.abc.Mapping):
-    """Reader class for 'wav.scp'.
+    """Reader class for 'train.scp'.
 
     Examples:
         key1 /some/path/a.wav
@@ -19,7 +19,7 @@ class SoundScpReader(collections.abc.Mapping):
         key4 /some/path/d.wav
         ...
 
-        >>> reader = SoundScpReader('wav.scp')
+        >>> reader = SoundScpReader('train.scp')
         >>> rate, array = reader['key1']
 
     """
@@ -67,7 +67,7 @@ class SoundScpReader(collections.abc.Mapping):
 
 
 class SoundScpWriter:
-    """Writer class for 'wav.scp'
+    """Writer class for 'train.scp'
 
     Examples:
         key1 /some/path/a.wav

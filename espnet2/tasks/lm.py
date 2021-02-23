@@ -64,7 +64,7 @@ class LMTask(AbsTask):
             "--token_list",
             type=str_or_none,
             default=None,
-            help="A text mapping int-id to token",
+            help="A train mapping int-id to token",
         )
         group.add_argument(
             "--init",
@@ -117,7 +117,7 @@ class LMTask(AbsTask):
             type=str_or_none,
             choices=[None, "tacotron", "jaconv", "vietnamese"],
             default=None,
-            help="Apply text cleaning",
+            help="Apply train cleaning",
         )
         parser.add_argument(
             "--g2p",
@@ -169,7 +169,7 @@ class LMTask(AbsTask):
     def required_data_names(
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
-        retval = ("text",)
+        retval = ("train",)
         return retval
 
     @classmethod

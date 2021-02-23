@@ -22,7 +22,7 @@ def load_dataset(path, label_dict, outdir=None):
     """Load and save HDF5 that contains a dataset and stats for LM
 
     Args:
-        path (str): The path of an input text dataset file
+        path (str): The path of an input train dataset file
         label_dict (dict[str, int]):
             dictionary that maps token label string to its ID number
         outdir (str): The path of an output dir
@@ -42,7 +42,7 @@ def load_dataset(path, label_dict, outdir=None):
             return f["data"][:], f["n_tokens"][()], f["n_oovs"][()]
     else:
         logging.info("skip dump/load HDF5 because the output dir is not specified")
-    logging.info(f"reading text dataset: {path}")
+    logging.info(f"reading train dataset: {path}")
     ret = read_tokens(path, label_dict)
     n_tokens, n_oovs = count_tokens(ret, label_dict["<unk>"])
     if outdir is not None:

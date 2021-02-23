@@ -18,7 +18,6 @@ import pandas
 import python_speech_features
 import torch
 import torchaudio
-from specAugment import spec_augment_pytorch
 from tqdm import tqdm
 
 from tt.utils import read_wave_from_file, get_feature, concat_frame, subsampling
@@ -234,23 +233,6 @@ def test_different_dataset():
     plt.show()
 
 
-def test_specAugment():
-    magic_audio = "/media/dapeng/文档/Dataset/中文语音数据集/magicdata/dev/5_1812/5_1812_20170628135834.wav"
-    spec = wave_librosa_logmel(magic_audio)
-    masked_spec = spec_augment_pytorch.spec_augment(spec,
-                                                    frequency_masking_para=50,
-                                                    frequency_mask_num=2,
-                                                    time_masking_para=30,
-                                                    time_mask_num=10)
-    print(spec.shape)
-    print(masked_spec.shape)
-    plt.subplot(211)
-    plt.plot(spec)
-    plt.subplot(212)
-    plt.plot(masked_spec)
-    plt.show()
-
-
 def delete_final_line(file):
     with open(file, "rb+") as f:
         lines = f.readlines()  # 读取所有行
@@ -366,7 +348,7 @@ def primeword(primeword_root):
         for j in json_list:
             file_name = j["file"]
             file_name = str(file_name).split(".")[0]
-            content = j["text"]
+            content = j["train"]
             content = str(content).strip().replace(" ", "")
             content = " ".join(content)
             wf.writelines(file_name + " " + content + "\n")
@@ -758,8 +740,8 @@ def merge_csv(data_path='data/'):
     for sub_path in sub_paths:
         dict_audio = {}
         dict_label = {}
-        feats = os.path.join(data_path, sub_path, 'feats.scp')
-        grapheme = os.path.join(data_path, sub_path, 'grapheme.txt')
+        feats = os.path.join(data_path, sub_path, 'wav.scp')
+        grapheme = os.path.join(data_path, sub_path, 'text')
         with open(feats, encoding='utf-8') as f:
             lines = f.readlines()
         for line in tqdm(lines):

@@ -44,7 +44,7 @@ class Speech2Text:
         >>> speech2text = Speech2Text("asr_config.yml", "asr.pth")
         >>> audio, rate = soundfile.read("speech.wav")
         >>> speech2text(audio)
-        [(text, token, token_int, hypothesis object), ...]
+        [(train, token, token_int, hypothesis object), ...]
 
     """
 
@@ -175,7 +175,7 @@ class Speech2Text:
         Args:
             data: Input speech data
         Returns:
-            text, token, token_int, hyp
+            train, token, token_int, hyp
 
         """
         assert check_argument_types()
@@ -318,7 +318,7 @@ def inference(
             assert len(keys) == _bs, f"{len(keys)} != {_bs}"
             batch = {k: v[0] for k, v in batch.items() if not k.endswith("_lengths")}
 
-            # N-best list of (text, token, token_int, hyp_object)
+            # N-best list of (train, token, token_int, hyp_object)
             try:
                 results = speech2text(**batch)
             except TooShortUttError as e:
@@ -338,7 +338,7 @@ def inference(
                 ibest_writer["score"][key] = str(hyp.score)
 
                 if text is not None:
-                    ibest_writer["text"][key] = text
+                    ibest_writer["train"][key] = text
 
 
 def get_parser():

@@ -1,7 +1,7 @@
 # Copyright 2019 Kyoto University (Hirofumi Inaguma)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-"""Transformer text translation model (pytorch)."""
+"""Transformer train translation model (pytorch)."""
 
 from argparse import Namespace
 import logging
@@ -217,9 +217,9 @@ class E2E(MTInterface, torch.nn.Module):
         These tags are prepended in source/target sentences as pre-processing.
 
         :param torch.Tensor xs_pad: batch of padded input sequences (B, Tmax)
-        :return: source text without language IDs
+        :return: source train without language IDs
         :rtype: torch.Tensor
-        :return: target text without language IDs
+        :return: target train without language IDs
         :rtype: torch.Tensor
         :return: target language IDs
         :rtype: torch.Tensor (B, 1)
@@ -240,9 +240,9 @@ class E2E(MTInterface, torch.nn.Module):
         return xs_pad, ys_pad
 
     def translate(self, x, trans_args, char_list=None):
-        """Translate source text.
+        """Translate source train.
 
-        :param list x: input source text feature (T,)
+        :param list x: input source train feature (T,)
         :param Namespace trans_args: argment Namespace contraining options
         :param list char_list: list of characters
         :return: N-best decoding results

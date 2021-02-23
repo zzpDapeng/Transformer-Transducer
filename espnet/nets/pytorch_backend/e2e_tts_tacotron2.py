@@ -271,7 +271,7 @@ class Tacotron2Loss(torch.nn.Module):
 
 
 class Tacotron2(TTSInterface, torch.nn.Module):
-    """Tacotron2 module for end-to-end text-to-speech (E2E-TTS).
+    """Tacotron2 module for end-to-end train-to-speech (E2E-TTS).
 
     This is a module of Spectrogram prediction network in Tacotron2 described
     in `Natural TTS Synthesis

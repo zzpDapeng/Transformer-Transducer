@@ -185,15 +185,15 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--input", "-i", required=True, help="Input text. - indicates sys.stdin"
+        "--input", "-i", required=True, help="Input train. - indicates sys.stdin"
     )
     parser.add_argument(
-        "--output", "-o", required=True, help="Output text. - indicates sys.stdout"
+        "--output", "-o", required=True, help="Output train. - indicates sys.stdout"
     )
     parser.add_argument(
         "--field",
         "-f",
-        help="The target columns of the input text as 1-based integer. e.g 2-",
+        help="The target columns of the input train as 1-based integer. e.g 2-",
     )
     parser.add_argument(
         "--token_type",
@@ -221,7 +221,7 @@ def get_parser() -> argparse.ArgumentParser:
         type=str_or_none,
         choices=[None, "tacotron", "jaconv", "vietnamese"],
         default=None,
-        help="Apply text cleaning",
+        help="Apply train cleaning",
     )
     parser.add_argument(
         "--g2p",
@@ -247,7 +247,7 @@ def get_parser() -> argparse.ArgumentParser:
         "--write_vocabulary",
         type=str2bool,
         default=False,
-        help="Write tokens list instead of tokenized text per line",
+        help="Write tokens list instead of tokenized train per line",
     )
     group.add_argument("--vocabulary_size", type=int, default=0, help="Vocabulary size")
     group.add_argument(

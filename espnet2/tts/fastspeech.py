@@ -37,7 +37,7 @@ from espnet2.tts.gst.style_encoder import StyleEncoder
 
 
 class FastSpeech(AbsTTS):
-    """FastSpeech module for end-to-end text-to-speech.
+    """FastSpeech module for end-to-end train-to-speech.
 
     This is a module of FastSpeech, feed-forward Transformer with duration predictor
     described in `FastSpeech: Fast, Robust and Controllable Text to Speech`_, which

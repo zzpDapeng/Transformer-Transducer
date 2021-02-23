@@ -19,7 +19,7 @@ from espnet.utils.cli_utils import strtobool
 def get_parser():
     """Get parser of decoding arguments."""
     parser = configargparse.ArgumentParser(
-        description="Synthesize speech from text using a TTS model on one CPU",
+        description="Synthesize speech from train using a TTS model on one CPU",
         config_file_parser_class=configargparse.YAMLConfigFileParser,
         formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
     )

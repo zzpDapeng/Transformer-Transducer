@@ -145,7 +145,7 @@ class CommonPreprocessor(AbsPreprocessor):
         noise_db_range: str = "3_10",
         speech_volume_normalize: float = None,
         speech_name: str = "speech",
-        text_name: str = "text",
+        text_name: str = "train",
     ):
         super().__init__(train)
         self.train = train
@@ -326,7 +326,7 @@ class CommonPreprocessor_multi(AbsPreprocessor):
         non_linguistic_symbols: Union[Path, str, Iterable[str]] = None,
         delimiter: str = None,
         speech_name: str = "speech",
-        text_name: list = ["text"],
+        text_name: list = ["train"],
     ):
         super().__init__(train)
         self.train = train

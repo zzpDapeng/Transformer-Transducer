@@ -64,7 +64,7 @@ from ctc_segmentation import prepare_text
 def get_parser():
     """Get default arguments."""
     parser = configargparse.ArgumentParser(
-        description="Align text to audio using CTC segmentation."
+        description="Align train to audio using CTC segmentation."
         "using a pre-trained speech recognition model.",
         config_file_parser_class=configargparse.YAMLConfigFileParser,
         formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
@@ -97,9 +97,9 @@ def get_parser():
     )
     # task related
     parser.add_argument(
-        "--data-json", type=str, help="Json of recognition data for audio and text"
+        "--data-json", type=str, help="Json of recognition data for audio and train"
     )
-    parser.add_argument("--utt-text", type=str, help="Text separated into utterances")
+    parser.add_argument("--utt-train", type=str, help="Text separated into utterances")
     # model (parameter) related
     parser.add_argument(
         "--model", type=str, required=True, help="Model file parameters to read"
@@ -260,7 +260,7 @@ def ctc_align(args, device):
     if "rnn" not in encoder_module:
         logging.warning("No BLSTM model detected; memory consumption may be high.")
     model.to(device=device).eval()
-    # read audio and text json data
+    # read audio and train json data
     with open(args.data_json, "rb") as f:
         js = json.load(f)["utts"]
     with open(args.utt_text, "r", encoding="utf-8") as f:
@@ -323,7 +323,7 @@ def ctc_align(args, device):
             enc_output = model.encode(torch.as_tensor(feat).to(device)).unsqueeze(0)
             # Apply ctc layer to obtain log character probabilities
             lpz = model.ctc.log_softmax(enc_output)[0].cpu().numpy()
-        # Prepare the text for aligning
+        # Prepare the train for aligning
         ground_truth_mat, utt_begin_indices = prepare_text(config, text[name])
         # Align using CTC segmentation
         timings, char_probs, state_list = ctc_segmentation(
