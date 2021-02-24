@@ -113,6 +113,7 @@ def eval(epoch, config, model, validating_data, logger, visualizer=None, vocab=N
             targets, targets_length = targets.cuda(), targets_length.cuda()
 
         preds = model.recognize(inputs, inputs_length)
+        print(preds)
 
         transcripts = [targets.cpu().numpy()[i][:targets_length[i].item()]
                        for i in range(targets.size(0))]
@@ -244,8 +245,8 @@ def main():
 
     for epoch in range(start_epoch, config.training.epochs):
 
-        train(epoch, config, model, training_data,
-              optimizer, logger, visualizer)
+        # train(epoch, config, model, training_data,
+        #       optimizer, logger, visualizer)
 
         save_name = os.path.join(exp_name, '%s.epoch%d.chkpt' % (config.training.save_model, epoch))
         save_model(model, optimizer, config, save_name)

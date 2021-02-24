@@ -7,6 +7,7 @@
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from espnet.nets.pytorch_backend.transformer.add_sos_eos import add_sos_eos
 from espnet2.asr.encoder.transformer_encoder import TransformerEncoder
@@ -79,36 +80,46 @@ class TransformerTransducer(nn.Module):
                          target_len=text_lengths.int())  # (batch)
         return loss
 
-    def recognize(self):
-        pass
+    @torch.no_grad()
+    def decode(self, enc_state, lengths):
+        # token_list = []
+        token_list = [self.sos]
+        device = torch.device("cuda" if enc_state.is_cuda else "cpu")
+        token = torch.tensor([token_list], dtype=torch.long).to(device)
+        decoder_out, decoder_out_lens, _ = self.decoder.forward_one_step(token,
+                                                                         self.decoder_left_mask)
+        decoder_out = decoder_out[:, -1, :]
+        for t in range(lengths):
+            logits = self.joint(enc_state[t].view(-1), decoder_out.view(-1))
+            out = F.softmax(logits, dim=0).detach()
+            pred = torch.argmax(out, dim=0)
+            pred = int(pred.item())
+
+            if pred != 0:  # blank_id
+                token_list.append(pred)
+                token = torch.tensor([token_list], dtype=torch.long)
+                if enc_state.is_cuda:
+                    token = token.cuda()
+                decoder_out, decoder_out_lens, _ = self.decoder.forward_one_step(token)  # 历史信息输入，但是只取最后一个输出
+                decoder_out = decoder_out[:, -1, :]
+        # return token_list
+        return token_list[1:]
+
+    @torch.no_grad()
+    def recognize(self,
+                  speech: torch.Tensor,
+                  speech_lengths: torch.Tensor) -> list:
+        batch_size = speech.size(0)
+        encoder_out, encoder_out_lens, _ = self.encoder(speech,
+                                                        speech_lengths,
+                                                        left_mask=self.encoder_left_mask,
+                                                        right_mask=self.encoder_right_mask)
+        results = []
+        for batch in range(batch_size):
+            decoded_seq = self.decode(encoder_out[batch], speech_lengths[batch])
+            results.append(decoded_seq)
+        return results
 
 
 def init_asr_model(configs):
     pass
-
-
-if __name__ == '__main__':
-    model = TransformerTransducer(vocab_size=1000,
-                                  encoder_layer_num=2,
-                                  decoder_layer_num=2)
-
-    audio = "../audio.wav"
-    import torchaudio
-    import torchaudio.compliance.kaldi as kaldi
-
-    waveform, sample_rate = torchaudio.load_wav(audio)
-    mat = kaldi.fbank(
-        waveform,
-        num_mel_bins=512,
-        frame_length=32,
-        frame_shift=10,
-        dither=0.1,
-        energy_floor=0.0
-    )
-    speech = mat.unsqueeze(0).repeat([2, 1, 1])
-    speech_lengths = torch.tensor([425, 50]).long()
-    text = torch.tensor([[1, 2, 3, 4],
-                         [2, 3, 4, -1]]).long()
-    text_length = torch.tensor([4, 3]).long()
-    loss = model(speech, speech_lengths, text, text_length)
-    print(loss)

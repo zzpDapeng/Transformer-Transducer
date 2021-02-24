@@ -237,3 +237,48 @@ class TransformerEncoder(AbsEncoder):
 
         olens = masks.squeeze(1).sum(1)
         return xs_pad, olens, None
+
+    def forward_one_step(self,
+                         xs_pad: torch.Tensor,
+                         left_mask: int = -1,
+                         right_mask: int = -1,
+                         prev_states: torch.Tensor = None,):
+        # attention mask todo:check attention mask
+        if right_mask >= 0 or left_mask >= 0:
+            attention_mask = ~make_attention_mask(xs_pad, left_mask, right_mask)[None, :, :]  # (1, L, L)
+            masks = attention_mask
+        else:
+            masks = None
+
+        # embed
+        if (
+                isinstance(self.embed, Conv2dSubsampling)
+                or isinstance(self.embed, Conv2dSubsampling6)
+                or isinstance(self.embed, Conv2dSubsampling8)
+        ):
+            short_status, limit_size = check_short_utt(self.embed, xs_pad.size(1))
+            if short_status:
+                raise TooShortUttError(
+                    f"has {xs_pad.size(1)} frames and is too short for subsampling "
+                    + f"(it needs more than {limit_size} frames), return empty results",
+                    xs_pad.size(1),
+                    limit_size,
+                    )
+            xs_pad, masks = self.embed(xs_pad, masks)
+        else:
+            xs_pad = self.embed(xs_pad)
+
+        # encoders
+        xs_pad, masks = self.encoders(xs_pad, masks)
+        # todo: my change, from conformer_encoder.py
+        if isinstance(xs_pad, tuple):
+            xs_pad = xs_pad[0]  # (xs_pad, pos_emb)
+        if self.normalize_before:
+            xs_pad = self.after_norm(xs_pad)
+
+        if masks is not None:
+            olens = masks.squeeze(1).sum(1)
+        else:
+            olens = None
+        return xs_pad, olens, None
+
